@@ -1,0 +1,325 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Configuração — {{ rifa.titulo }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* cabeçalho da página */
+  .page-head{
+    display:flex;
+    gap:.6rem;
+    align-items:center;
+    margin-bottom:1rem;
+  }
+  .page-head-title{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+
+  /* inputs escuros */
+  .form-control,
+  .form-select,
+  textarea.form-control{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.15);
+    color:#e2e8f0;
+  }
+  .form-control:focus,
+  .form-select:focus,
+  textarea.form-control:focus{
+    background:rgba(15,23,42,.6);
+    border-color:rgba(148,163,184,.5);
+    box-shadow:none;
+    color:#fff;
+  }
+  .form-text{
+    color:rgba(226,232,240,.45);
+  }
+  label.form-label{
+    font-weight:500;
+  }
+
+  /* switches */
+  .form-check-input{
+    background:rgba(15,23,42,.2);
+    border:1px solid rgba(148,163,184,.4);
+  }
+  .form-check-input:checked{
+    background:#22c55e;
+    border-color:#22c55e;
+  }
+  .form-check-label{ color:#e2e8f0; }
+
+  /* blocos "cards" escuros */
+  .cfg-block{
+    border:1px solid rgba(148,163,184,.08);
+    border-radius:1rem;
+    background:rgba(15,23,42,.2);
+    padding:1rem 1.1rem 1.05rem;
+  }
+  .cfg-title{
+    font-weight:600;
+    margin-bottom:.65rem;
+    color:#fff;
+  }
+
+  /* botões base do painel */
+  .btn-gold{
+    background:linear-gradient(180deg,#f1c94d 0%,#d9ad2f 100%);
+    border:1px solid rgba(250,204,21,.3);
+    color:#111;
+    font-weight:600;
+    border-radius:.7rem;
+  }
+  .btn-gold:hover{
+    filter:brightness(1.04);
+    color:#000;
+  }
+  .btn-outline-light-dark{
+    background:rgba(15,23,42,.15);
+    border:1px solid rgba(226,232,240,.3);
+    color:#fff;
+    border-radius:.7rem;
+  }
+  .btn-outline-light-dark:hover{
+    background:rgba(226,232,240,.05);
+    color:#fff;
+  }
+
+  /* botões dentro da lista de cotas */
+  .cota-row .btn{
+    border-radius:.6rem;
+  }
+
+  /* links "ver atual" sem sublinhado */
+  .cfg-link{
+    text-decoration:none;
+  }
+  .cfg-link:hover{
+    text-decoration:none;
+    color:#fff;
+  }
+
+  /* último update */
+  .cfg-updated{
+    font-size:.7rem;
+    color:rgba(226,232,240,.4);
+  }
+
+  /* modal-like inside form (for file) */
+  input[type="file"].form-control{
+    padding:.3rem .6rem;
+    background:rgba(15,23,42,.45);
+  }
+</style>
+<script>
+  function addCotaRow(){
+    const wrap = document.getElementById('cotas-wrap');
+    const div = document.createElement('div');
+    div.className = 'row g-2 align-items-center cota-row';
+    div.innerHTML = `
+      <div class="col-3 col-md-2">
+        <input type="number" min="1" class="form-control" name="cota_numero[]" placeholder="Nº">
+      </div>
+      <div class="col-6 col-md-7">
+        <input type="text" class="form-control" name="cota_desc[]" placeholder="Descrição do prêmio">
+      </div>
+      <div class="col-2 col-md-2">
+        <input type="text" class="form-control" name="cota_valor[]" placeholder="R$">
+      </div>
+      <div class="col-1 text-end">
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.cota-row').remove()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    `;
+    wrap.appendChild(div);
+  }
+</script>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <a href="{% url 'adminx_rifa_detail' rifa.id %}" class="btn btn-outline-light-dark btn-sm d-inline-flex align-items-center gap-2">
+    <i class="fa-solid fa-arrow-left"></i> <span>Voltar para a rifa</span>
+  </a>
+  <div class="page-head-title">Configuração da rifa</div>
+  <span class="text-secondary small">/ {{ rifa.titulo }}</span>
+</div>
+
+<div class="panel">
+  <div class="panel-h d-flex align-items-center gap-2">
+    <div class="h6 mb-0"><i class="fa-solid fa-sliders me-2"></i>Dados e opções</div>
+    <span class="ms-auto cfg-updated">
+      Última atualização: {{ rifa.updated_at|default:rifa.created_at }}
+    </span>
+  </div>
+  <div class="panel-c">
+    <form method="post" enctype="multipart/form-data" class="vstack gap-3">
+      {% csrf_token %}
+
+      <!-- BLOCO: DADOS PRINCIPAIS -->
+      <div class="cfg-block">
+        <div class="cfg-title">Dados principais</div>
+        <div class="row g-2">
+          <div class="col-md-8">
+            <label class="form-label">Título da rifa</label>
+            <input type="text" name="titulo" class="form-control" value="{{ rifa.titulo }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Slug (URL)</label>
+            <input type="text" name="slug" class="form-control" value="{{ rifa.slug }}">
+            <div class="form-text">Ex.: {{ request.scheme }}://{{ request.get_host }}/r/{{ rifa.slug }}/</div>
+          </div>
+        </div>
+
+        <div class="row g-2 align-items-center mt-1">
+          <div class="col-md-4">
+            <label class="form-label">Preço por número (R$)</label>
+            <input type="text" name="preco_numero" class="form-control" value="{{ rifa.preco_numero }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quantidade de números</label>
+            <input type="number" min="1" name="quantidade_numeros" class="form-control" value="{{ rifa.quantidade_numeros }}">
+           
+          </div>
+          <div class="col-md-4">
+            <label class="form-label d-block">Status</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="ativo" id="ativoCheck"
+                     {% if rifa.ativo %}checked{% endif %}>
+              <label class="form-check-label" for="ativoCheck">Rifa ativa</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO: PERÍODO DE VENDAS -->
+      <div class="cfg-block">
+        <div class="cfg-title">Período de vendas</div>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">Início das vendas</label>
+            <input type="datetime-local" name="inicio_vendas" class="form-control"
+                   value="{{ rifa.inicio_vendas|date:'Y-m-d\\TH:i' }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fim das vendas</label>
+            <input type="datetime-local" name="fim_vendas" class="form-control"
+                   value="{{ rifa.fim_vendas|date:'Y-m-d\\TH:i' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO: CONTROLES AVANÇADOS -->
+      <div class="cfg-block">
+        <div class="cfg-title">Controles</div>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label">Minutos para expirar reserva</label>
+            <input type="number" min="1" name="minutos_expiracao_reserva"
+                   class="form-control"
+                   value="{{ rifa.minutos_expiracao_reserva|default:15 }}">
+            <div class="form-text">Ex.: 15 = depois de 15 min volta a ficar livre.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Limite por pedido</label>
+            <input type="number" min="1" name="limite_por_pedido"
+                   class="form-control"
+                   value="{{ rifa.limite_por_pedido|default:10 }}">
+          </div>
+          <div class="col-md-4 d-flex align-items-center gap-3 flex-wrap mt-2 mt-md-0">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="permitir_numero_escolhido" id="permNum"
+                     {% if rifa.permitir_numero_escolhido %}checked{% endif %}>
+              <label class="form-check-label" for="permNum">Permitir escolher o número</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="mostrar_top_compradores" id="mostrarTop"
+                     {% if rifa.mostrar_top_compradores %}checked{% endif %}>
+              <label class="form-check-label" for="mostrarTop">Mostrar top compradores</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO: PÁGINA PÚBLICA -->
+      <div class="cfg-block">
+        <div class="cfg-title">Página pública</div>
+        <div class="mb-2">
+          <label class="form-label">Descrição / regulamento</label>
+          <textarea name="descricao" rows="4" class="form-control">{{ rifa.descricao }}</textarea>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label d-flex align-items-center gap-2">
+              Banner da rifa
+              {% if rifa.banner %}
+                <a href="{{ rifa.banner.url }}" target="_blank" class="small text-info cfg-link">ver atual</a>
+              {% endif %}
+            </label>
+            <input type="file" name="banner" class="form-control">
+            <div class="form-text">Imagem que aparece no topo da página pública.</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Link WhatsApp (suporte)</label>
+            <input type="url" name="link_whatsapp" class="form-control" value="{{ rifa.link_whatsapp }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Link do grupo</label>
+            <input type="url" name="link_grupo" class="form-control" value="{{ rifa.link_grupo }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCO: COTAS PREMIADAS -->
+      <div class="cfg-block">
+        <div class="d-flex align-items-center mb-2">
+          <div class="cfg-title mb-0">Cotas premiadas</div>
+          <button type="button" class="btn btn-sm btn-gold ms-auto" onclick="addCotaRow()">
+            <i class="fa-solid fa-plus me-1"></i> Adicionar cota
+          </button>
+        </div>
+        <p class="text-secondary small mb-2">
+          Essas cotas ficam ocultas no público. Quando o cliente compra e paga uma delas, você mostra o prêmio.
+        </p>
+        <div id="cotas-wrap" class="vstack gap-2">
+          {% if cotas %}
+            {% for c in cotas %}
+              <div class="row g-2 align-items-center cota-row">
+                <div class="col-3 col-md-2">
+                  <input type="number" min="1" class="form-control" name="cota_numero[]" value="{{ c.numero }}" placeholder="Nº">
+                </div>
+                <div class="col-6 col-md-7">
+                  <input type="text" class="form-control" name="cota_desc[]" value="{{ c.descricao }}" placeholder="Descrição do prêmio">
+                </div>
+                <div class="col-2 col-md-2">
+                  <input type="text" class="form-control" name="cota_valor[]" value="{{ c.valor_premio }}" placeholder="R$">
+                </div>
+                <div class="col-1 text-end">
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.cota-row').remove()">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-secondary small">Nenhuma cota premiada cadastrada.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- AÇÕES -->
+      <div class="d-flex gap-2 mt-1">
+        <button class="btn btn-gold" type="submit">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Salvar
+        </button>
+        <a href="{% url 'adminx_rifa_detail' rifa.id %}" class="btn btn-outline-light-dark">
+          Cancelar
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

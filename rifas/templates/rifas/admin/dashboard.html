@@ -1,0 +1,399 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Dashboard — Painel Rifas{% endblock %}
+
+{% block head_extra %}
+<style>
+  .kpi-box{
+    background: radial-gradient(600px 260px at 10% 0%, rgba(56,189,248,.12), rgba(16,22,32,0) 65%),
+                linear-gradient(180deg, rgba(16,22,32,.85) 0%, rgba(12,16,22,.35) 100%);
+    border:1px solid rgba(148,163,184,.05);
+    border-radius:16px;
+    padding:14px 14px 12px;
+    min-height:96px;
+    box-shadow:0 16px 30px rgba(0,0,0,.18);
+  }
+  .chip{
+    display:inline-flex;
+    gap:6px;
+    align-items:center;
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.08);
+    border-radius:999px;
+    padding:4px 10px 4px;
+    font-size:.7rem;
+  }
+  .btn-outline-soft{
+    background:rgba(15,23,42,.1);
+    border:1px solid rgba(148,163,184,.12);
+    color:#e2e8f0;
+  }
+  .btn-outline-soft:hover{background:rgba(148,163,184,.08);}
+
+  .table-darkish.table > :not(caption) > * > *{
+    background:transparent;
+    box-shadow:none;
+  }
+
+  /* cartao minha conta (quando estiver no conteúdo) */
+  .card-minha-conta{
+    background:rgba(15,23,42,.45);
+    border:1px solid rgba(148,163,184,.05);
+    border-radius:1rem;
+    padding:1rem 1rem 1rem;
+  }
+  .avatar-empresa{
+    width:58px;
+    height:58px;
+    border-radius:.8rem;
+    background:rgba(15,23,42,.2);
+    border:1px solid rgba(148,163,184,.1);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .avatar-empresa img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+
+  /* quando o card for levado pra sidebar */
+  .sidebar .card-minha-conta{
+    margin-top:.4rem;
+    border-radius:.9rem;
+    padding:.7rem .6rem .75rem;
+    background:rgba(15,23,42,.25);
+  }
+  .sidebar .card-minha-conta .avatar-empresa{
+    width:40px;
+    height:40px;
+    border-radius:.6rem;
+  }
+  .sidebar .card-minha-conta .fw-semibold{
+    font-size:.7rem;
+  }
+  .sidebar .card-minha-conta .text-secondary.small{
+    font-size:.6rem;
+  }
+  .sidebar .card-minha-conta .btn{
+    font-size:.62rem;
+    padding:.35rem .75rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ---- KPIs ---- #}
+<div class="row g-3">
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-bolt text-warning"></i>Vendas hoje</div>
+      <div class="kpi-v">{{ vendas_hoje.qtd|default:0 }} pedido(s)</div>
+      <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_hoje.total|default:"0.00" }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-calendar-days text-info"></i>Vendas no mês</div>
+      <div class="kpi-v">{{ vendas_mes.qtd|default:0 }} pedido(s)</div>
+      <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_mes.total|default:"0.00" }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-ticket text-success"></i>Rifas ativas</div>
+      <div class="kpi-v">{{ rifas_ativas }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">em andamento</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-hourglass-half text-warning"></i>Pedidos pendentes</div>
+      <div class="kpi-v">{{ pendentes }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">aguardando pagamento</div>
+    </div>
+  </div>
+</div>
+
+{# ---- linha: números + vendas (o card vai ser movido por JS) ---- #}
+<div class="row g-3 mt-1">
+  <div class="col-12 col-lg-4">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="title-sm">
+          <i class="fa-solid fa-hashtag me-2"></i>Números (geral)
+        </div>
+      </div>
+      <div class="panel-c">
+        <div class="d-flex flex-wrap gap-2">
+          <span class="chip">
+            <i class="fa-regular fa-circle-check text-success"></i>
+            Livres: <strong class="ms-1">{{ numeros_status.livre|default:0 }}</strong>
+          </span>
+          <span class="chip">
+            <i class="fa-regular fa-clock text-warning"></i>
+            Reservados: <strong class="ms-1">{{ numeros_status.reservado|default:0 }}</strong>
+          </span>
+          <span class="chip">
+            <i class="fa-solid fa-check-double text-info"></i>
+            Pagos: <strong class="ms-1">{{ numeros_status.pago|default:0 }}</strong>
+          </span>
+        </div>
+
+        <form class="mt-3" method="post" action="{% url 'adminx_liberar_reservas' %}">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-soft">
+            <i class="fa-regular fa-clock me-1"></i>
+            Liberar reservas expiradas
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="title-sm">
+          <i class="fa-solid fa-chart-line me-2"></i>Vendas recentes
+        </div>
+        <a class="btn btn-sm btn-outline-soft ms-auto" href="{% url 'adminx_export_pedidos_csv' %}">
+          <i class="fa-solid fa-file-csv me-1"></i>Exportar CSV
+        </a>
+      </div>
+      <div class="panel-c">
+        <canvas id="chartVendas" height="110"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {# esse card será movido pra sidebar via JS #}
+  <div class="col-12 col-lg-3">
+    <div class="card-minha-conta" id="cardMinhaConta">
+      <div class="d-flex gap-3 align-items-center mb-3">
+        <div class="avatar-empresa">
+          {% if empresa and empresa.logo %}
+            <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome }}">
+          {% else %}
+            <i class="fa-regular fa-building text-secondary fs-4"></i>
+          {% endif %}
+        </div>
+        <div>
+          <div class="fw-semibold">Minha conta</div>
+          <div class="text-secondary small">
+            {% if empresa %}{{ empresa.nome }}{% else %}Sem empresa cadastrada{% endif %}
+          </div>
+        </div>
+      </div>
+      <button type="button"
+              class="btn btn-sm btn-outline-soft w-100"
+              data-bs-toggle="modal"
+              data-bs-target="#empresaModal">
+        <i class="fa-solid fa-user-gear me-1"></i> {% if empresa %}Editar{% else %}Cadastrar{% endif %}
+      </button>
+    </div>
+  </div>
+</div>
+
+{# ---- últimos pedidos ---- #}
+<div class="panel mt-3">
+  <div class="panel-h">
+    <div class="title-sm">
+      <i class="fa-solid fa-receipt me-2"></i>Últimos pedidos
+    </div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0 table-darkish">
+        <thead>
+          <tr>
+            <th>Protocolo</th>
+            <th>Rifa</th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Criado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in ultimos_pedidos %}
+          <tr>
+            <td class="fw-semibold">{{ p.protocolo }}</td>
+            <td>{{ p.rifa.titulo }}</td>
+            <td>{{ p.cliente.nome }}</td>
+            <td>R$ {{ p.total }}</td>
+            <td>
+              {% if p.status == "pago" %}
+                <span class="badge bg-success bg-opacity-80 rounded-pill px-3 py-1">pago</span>
+              {% elif p.status == "pendente" %}
+                <span class="badge bg-warning bg-opacity-80 rounded-pill px-3 py-1 text-dark">pendente</span>
+              {% elif p.status == "expirado" %}
+                <span class="badge bg-secondary bg-opacity-50 rounded-pill px-3 py-1">expirado</span>
+              {% else %}
+                <span class="badge bg-danger bg-opacity-80 rounded-pill px-3 py-1">{{ p.status }}</span>
+              {% endif %}
+            </td>
+            <td>{{ p.criado_em|date:"d/m H:i" }}</td>
+            <td>
+              <a href="{% url 'adminx_pedido_detail' p.id %}" class="btn btn-sm btn-accent">
+                <i class="fa-solid fa-eye me-1"></i>Ver
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-secondary">Sem pedidos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ================== MODAL MINHA CONTA ================== #}
+<div class="modal fade" id="empresaModal" tabindex="-1" aria-labelledby="empresaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content bg-darkish">
+      <div class="modal-header">
+        <h5 class="modal-title" id="empresaModalLabel">
+          <i class="fa-regular fa-building me-1"></i>
+          {% if empresa %}Editar empresa{% else %}Cadastrar empresa{% endif %}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <form method="post" action="{% url 'adminx_empresa_update' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if empresa %}
+          <input type="hidden" name="empresa_id" value="{{ empresa.id }}">
+        {% endif %}
+        <div class="modal-body">
+          <div class="mb-2 text-secondary small">
+            Esses dados serão usados nos relatórios/comprovantes e na identificação da ação.
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nome / Razão social</label>
+            <input type="text"
+                   name="nome"
+                   value="{% if empresa %}{{ empresa.nome }}{% else %}{{ request.user.get_full_name|default:request.user.username }}{% endif %}"
+                   class="form-control form-control-dark"
+                   required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">CPF / CNPJ</label>
+            <input type="text"
+                   name="documento"
+                   value="{% if empresa %}{{ empresa.documento }}{% endif %}"
+                   class="form-control form-control-dark"
+                   placeholder="000.000.000-00 ou 00.000.000/0000-00">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">E-mail</label>
+            <input type="email"
+                   name="email"
+                   value="{% if empresa %}{{ empresa.email }}{% else %}{{ request.user.email }}{% endif %}"
+                   class="form-control form-control-dark">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Telefone</label>
+            <input type="text"
+                   name="telefone"
+                   value="{% if empresa %}{{ empresa.telefone }}{% endif %}"
+                   class="form-control form-control-dark"
+                   placeholder="(63) 9 0000-0000">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Logo</label>
+            <input type="file" name="logo" accept="image/*" class="form-control form-control-dark">
+            {% if empresa and empresa.logo %}
+              <div class="mt-2 small text-secondary">Logo atual:</div>
+              <img src="{{ empresa.logo.url }}" alt="Logo" style="max-height:40px;border-radius:.35rem;">
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+  (function(){
+    // gráfico
+    const rows = [
+      {% for p in ultimos_pedidos %}
+        {d: "{{ p.criado_em|date:'Y-m-d' }}", v: Number("{{ p.total|default:'0' }}")},
+      {% endfor %}
+    ];
+    const map = {};
+    rows.forEach(r => { map[r.d] = (map[r.d] || 0) + r.v; });
+    const labels = Object.keys(map).sort();
+    const data = labels.map(k => map[k]);
+
+    const el = document.getElementById('chartVendas');
+    if(el){
+      new Chart(el, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Total por dia (R$)',
+            data,
+            tension: .38,
+            fill: true,
+            backgroundColor: 'rgba(56,189,248,.1)',
+            borderColor: 'rgba(56,189,248,1)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#38bdf8'
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#d1d5db', font:{size:11} } }
+          },
+          scales: {
+            x: {
+              ticks: { color: 'rgba(226,232,240,.5)', font:{size:10} },
+              grid: { color: 'rgba(148,163,184,.08)' }
+            },
+            y: {
+              ticks: { color: 'rgba(226,232,240,.5)', font:{size:10} },
+              grid: { color: 'rgba(148,163,184,.04)' }
+            }
+          }
+        }
+      });
+    }
+
+    // mover o card "Minha conta" pra logo abaixo do "Sair" na sidebar
+    const card = document.getElementById('cardMinhaConta');
+    const sidebar = document.querySelector('.sidebar .nav-group');
+    if (card && sidebar) {
+      const links = sidebar.querySelectorAll('.menu-link');
+      let sairLink = null;
+      links.forEach(function (lk) {
+        if (lk.textContent.trim().toLowerCase().includes('sair')) {
+          sairLink = lk;
+        }
+      });
+      if (sairLink) {
+        // insere logo depois do sair
+        sairLink.insertAdjacentElement('afterend', card);
+        // garante largura 100%
+        card.style.width = '100%';
+      }
+    }
+  })();
+</script>
+{% endblock %}

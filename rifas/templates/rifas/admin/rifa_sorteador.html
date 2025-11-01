@@ -1,0 +1,487 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Sorteador — {{ rifa.titulo }}{% endblock %}
+
+{% block head_extra %}
+<style>
+  .page-head{
+    display:flex;
+    gap:.6rem;
+    align-items:center;
+    margin-bottom:1rem;
+    flex-wrap:wrap;
+  }
+  .btn-back{
+    background:radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), rgba(15,23,42,.05));
+    border:1px solid rgba(148,163,184,.35);
+    color:#fff !important;
+    border-radius:.75rem;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.4rem .85rem .45rem;
+    text-decoration:none !important;
+    transition:.15s ease;
+  }
+  .btn-back:hover{
+    background:rgba(148,163,184,.14);
+    border-color:rgba(148,163,184,.4);
+  }
+  .page-head-title{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+
+  .sorteio-wrapper{
+    position:relative;
+    background:radial-gradient(circle at 10% 20%, rgba(15,23,42,.0), rgba(15,23,42,.8)),
+               rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.12);
+    border-radius:1rem;
+    padding:1.5rem 1.5rem 1.5rem;
+    text-align:center;
+    min-height:450px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1.25rem;
+    overflow:hidden;
+  }
+
+  /* recipiente do confete */
+  #confetti-container{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .confetti-piece{
+    position:absolute;
+    top:-20px;
+    width:10px;
+    height:18px;
+    opacity:0;
+    animation: confetti-fall 3s linear forwards;
+    transform-origin:center;
+  }
+  @keyframes confetti-fall{
+    0%{
+      opacity:1;
+      transform:translateY(-20px) rotate(0deg);
+    }
+    100%{
+      opacity:0;
+      transform:translateY(520px) rotate(320deg);
+    }
+  }
+
+  .sorteio-status{
+    font-size:.75rem;
+    color:rgba(226,232,240,.6);
+  }
+
+  .big-number{
+    font-size:5rem;
+    line-height:1;
+    font-weight:700;
+    letter-spacing:.08em;
+    color:#fff;
+    text-shadow:0 10px 34px rgba(0,0,0,.45);
+    min-height:5.4rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .countdown{
+    font-size:6rem;
+    font-weight:700;
+    color:#facc15;
+    text-shadow:0 0 28px rgba(250,204,21,.3);
+  }
+
+  .btn-sortear{
+    background:linear-gradient(180deg,#f1c94d 0%,#d9ad2f 100%);
+    border:1px solid rgba(250,204,21,.35);
+    color:#111 !important;
+    font-weight:700;
+    border-radius:.85rem;
+    padding:.65rem 1.8rem .75rem;
+    font-size:1rem;
+    display:inline-flex;
+    gap:.4rem;
+    align-items:center;
+    transition:.12s ease;
+  }
+  .btn-sortear:hover{
+    filter:brightness(1.03);
+  }
+  .btn-sortear:disabled,
+  .btn-sortear.disabled{
+    opacity:.45;
+    cursor:not-allowed;
+  }
+
+  .winner-card{
+    background:rgba(15,23,42,.55);
+    border:1px solid rgba(250,204,21,.25);
+    border-radius:1rem;
+    padding:1rem 1.1rem 1rem;
+    text-align:left;
+    max-width:520px;
+    width:100%;
+    display:none;
+  }
+  .winner-title{
+    font-weight:600;
+    margin-bottom:.35rem;
+    display:flex;
+    align-items:center;
+    gap:.4rem;
+  }
+  .winner-title i{
+    color:#facc15;
+  }
+  .winner-line{
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    font-size:.8rem;
+    margin-bottom:.25rem;
+  }
+  .winner-line span:last-child{
+    text-align:right;
+  }
+  .winner-number-badge{
+    background:rgba(250,204,21,.1);
+    border:1px solid rgba(250,204,21,.35);
+    border-radius:.75rem;
+    padding:.25rem .75rem .25rem;
+    font-weight:700;
+    color:#fff;
+    font-size:1.1rem;
+  }
+  .winner-actions{
+    display:flex;
+    gap:.45rem;
+    margin-top:.65rem;
+    flex-wrap:wrap;
+  }
+  .btn-wpp-xs{
+    background:#25d366;
+    border:1px solid #25d366;
+    color:#0f172a !important;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.25rem;
+    min-height:30px;
+    border-radius:.55rem;
+    text-decoration:none !important;
+    padding:.35rem .7rem .35rem;
+  }
+  .btn-ghost{
+    background:rgba(15,23,42,.2);
+    border:1px solid rgba(148,163,184,.12);
+    color:#e2e8f0;
+    border-radius:.55rem;
+    padding:.35rem .7rem .35rem;
+    text-decoration:none !important;
+  }
+  .alert-lock{
+    background:rgba(248,113,113,.12);
+    border:1px solid rgba(248,113,113,.24);
+    color:#fecaca;
+    border-radius:.5rem;
+    padding:.4rem .6rem .4rem;
+    font-size:.75rem;
+  }
+
+  /* efeito de destaque */
+  .win-pulse{
+    animation: winpulse 1.05s ease-in-out 3;
+  }
+  @keyframes winpulse{
+    0%{ transform:scale(1); text-shadow:0 0 0 rgba(250,204,21,.2); }
+    40%{ transform:scale(1.12); text-shadow:0 0 24px rgba(250,204,21,.65); }
+    100%{ transform:scale(1); text-shadow:0 0 0 rgba(250,204,21,.2); }
+  }
+
+  @media(max-width:768px){
+    .big-number{ font-size:4rem; }
+    .countdown{ font-size:4.5rem; }
+    .sorteio-wrapper{ min-height:420px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <a href="{% url 'adminx_rifa_detail' rifa.id %}" class="btn-back">
+    <i class="fa-solid fa-arrow-left"></i>
+    Voltar
+  </a>
+  <div class="page-head-title">Sorteador — {{ rifa.titulo }}</div>
+</div>
+
+<div class="sorteio-wrapper"
+     id="sorteio-wrapper"
+     data-rifa-id="{{ rifa.id }}"
+     data-total="{{ total_configurado|default:0 }}">
+  {% if not liberado %}
+    <div class="alert-lock mb-2">
+      <i class="fa-solid fa-lock me-1"></i>
+      Sorteio bloqueado: números pagos {{ qtd_pagos }} / {{ total_configurado }}. Conclua os pagamentos primeiro.
+    </div>
+  {% endif %}
+
+  <!-- confete só na hora do resultado -->
+  <div id="confetti-container"></div>
+
+  <div id="sorteio-display">
+    <div class="sorteio-status" id="sorteio-status">
+      {% if liberado %}
+        Pronto para sortear. Clique no botão 👇
+      {% else %}
+        Aguardando 100% dos números pagos…
+      {% endif %}
+    </div>
+
+    <div id="sorteio-number" class="big-number">
+      —
+    </div>
+
+    <button id="btn-sortear"
+            class="btn-sortear mt-2"
+            {% if not liberado %}disabled{% endif %}>
+      <i class="fa-solid fa-shuffle"></i> Sortear agora
+    </button>
+  </div>
+
+  <div class="winner-card" id="winner-card">
+    <div class="winner-title">
+      <i class="fa-solid fa-trophy"></i>
+      Resultado do sorteio
+    </div>
+    <div class="winner-line">
+      <span>Número sorteado:</span>
+      <span class="winner-number-badge" id="winner-numero">#000</span>
+    </div>
+    <div class="winner-line">
+      <span>Cliente:</span>
+      <span id="winner-cliente">—</span>
+    </div>
+    <div class="winner-line">
+      <span>CPF:</span>
+      <span id="winner-cpf">—</span>
+    </div>
+    <div class="winner-line" id="winner-cotas-line" style="display:none;">
+      <span>Cotas compradas:</span>
+      <span id="winner-cotas">0</span>
+    </div>
+    <div class="winner-line" id="winner-gasto-line" style="display:none;">
+      <span>Total gasto na rifa:</span>
+      <span id="winner-gasto">R$ 0,00</span>
+    </div>
+    <div class="winner-actions" id="winner-actions">
+      <!-- JS preenche aqui -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function(){
+  const wrapper = document.getElementById('sorteio-wrapper');
+  if (!wrapper) return;
+
+  const rifaId = wrapper.dataset.rifaId;
+  const totalConfig = parseInt(wrapper.dataset.total || "0", 10) || 0;
+  const url = "{% url 'adminx_rifa_sorteio_json' 0 %}".replace("0", rifaId);
+
+  const btn = document.getElementById('btn-sortear');
+  const display = document.getElementById('sorteio-number');
+  const statusEl = document.getElementById('sorteio-status');
+  const winnerCard = document.getElementById('winner-card');
+  const winnerNumero = document.getElementById('winner-numero');
+  const winnerCliente = document.getElementById('winner-cliente');
+  const winnerCpf = document.getElementById('winner-cpf');
+  const winnerCotas = document.getElementById('winner-cotas');
+  const winnerGasto = document.getElementById('winner-gasto');
+  const winnerCotasLine = document.getElementById('winner-cotas-line');
+  const winnerGastoLine = document.getElementById('winner-gasto-line');
+  const winnerActions = document.getElementById('winner-actions');
+  const confettiContainer = document.getElementById('confetti-container');
+
+  let spinningTimer = null;
+
+  function setStatus(text){
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  // gira respeitando o total de números configurados
+  function randNumberInRange(){
+    if (!totalConfig || totalConfig < 1){
+      return Math.floor(Math.random() * 999) + 1;
+    }
+    return Math.floor(Math.random() * totalConfig) + 1;
+  }
+
+  // 3,2,1
+  function startCountdown(){
+    return new Promise((resolve) => {
+      let count = 3;
+      display.classList.remove('big-number');
+      display.classList.add('countdown');
+      display.textContent = count;
+      const interval = setInterval(() => {
+        count--;
+        if (count <= 0){
+          clearInterval(interval);
+          resolve();
+        } else {
+          display.textContent = count;
+        }
+      }, 700);
+    });
+  }
+
+  // giro de números
+  function startSpinning(){
+    return new Promise((resolve) => {
+      display.classList.remove('countdown');
+      display.classList.add('big-number');
+      const start = Date.now();
+      spinningTimer = setInterval(() => {
+        display.textContent = randNumberInRange();
+      }, 75);
+      setTimeout(() => {
+        clearInterval(spinningTimer);
+        spinningTimer = null;
+        resolve();
+      }, 1500);
+    });
+  }
+
+  // confete apenas na revelação
+  function throwConfetti(){
+    if (!confettiContainer) return;
+    confettiContainer.innerHTML = "";
+
+    const colors = ["#f97316","#facc15","#22c55e","#38bdf8","#e11d48","#a855f7"];
+    const totalPieces = 40;
+
+    for (let i = 0; i < totalPieces; i++){
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      const left = Math.random() * 100;
+      const size = 8 + Math.random()*6;
+      const color = colors[Math.floor(Math.random()*colors.length)];
+      const delay = (Math.random() * 0.6).toFixed(2);
+      piece.style.left = left + "%";
+      piece.style.width = size + "px";
+      piece.style.height = (size + 5) + "px";
+      piece.style.background = color;
+      piece.style.animationDelay = delay + "s";
+      confettiContainer.appendChild(piece);
+    }
+
+    setTimeout(() => {
+      if (confettiContainer) confettiContainer.innerHTML = "";
+    }, 3200);
+  }
+
+  function formatMoney(v){
+    // v vem tipo "10.00" ou "0.00"
+    if (!v) return "R$ 0,00";
+    const num = Number(v);
+    if (isNaN(num)) return "R$ 0,00";
+    return "R$ " + num.toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function showWinner(data){
+    if (!data) return;
+    winnerCard.style.display = "block";
+    winnerNumero.textContent = "#" + data.numero;
+    winnerCliente.textContent = data.cliente || "—";
+    winnerCpf.textContent = data.cpf || "—";
+
+    // novas infos 👇
+    if (typeof data.qtd_cotas_cliente !== "undefined" && data.qtd_cotas_cliente !== null){
+      winnerCotas.textContent = data.qtd_cotas_cliente;
+      winnerCotasLine.style.display = "flex";
+    } else {
+      winnerCotasLine.style.display = "none";
+    }
+
+    if (typeof data.total_gasto_cliente !== "undefined" && data.total_gasto_cliente !== null){
+      winnerGasto.textContent = formatMoney(data.total_gasto_cliente);
+      winnerGastoLine.style.display = "flex";
+    } else {
+      winnerGastoLine.style.display = "none";
+    }
+
+    // destaque no número grande
+    display.classList.add('win-pulse');
+
+    // ações
+    let actionsHtml = "";
+    if (data.telefone){
+      const tel = data.telefone;
+      const msg = encodeURIComponent("Olá "+(data.cliente || "")+", você foi sorteado na rifa {{ rifa.titulo }}! Número: #"+data.numero);
+      actionsHtml += `<a class="btn-wpp-xs" target="_blank" href="https://wa.me/55${tel}?text=${msg}">
+        <i class="fa-brands fa-whatsapp"></i> Chamar no Whats
+      </a>`;
+    }
+    if (data.pedido_url){
+      actionsHtml += `<a class="btn-ghost" href="${data.pedido_url}" target="_blank">
+        <i class="fa-solid fa-up-right-from-square"></i> Ver pedido
+      </a>`;
+    }
+    winnerActions.innerHTML = actionsHtml;
+
+    // 🎉 confete agora
+    throwConfetti();
+  }
+
+  async function doSorteio(){
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    display.classList.remove('win-pulse');
+    winnerCard.style.display = "none";
+    setStatus("Preparando sorteio…");
+
+    try {
+      await startCountdown();
+      setStatus("Girando números…");
+      await startSpinning();
+
+      const resp = await fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}});
+      const data = await resp.json();
+
+      if (!data.ok){
+        display.textContent = "—";
+        setStatus(data.error || "Erro ao sortear");
+      } else {
+        display.textContent = data.numero;
+        setStatus("Sorteio concluído ✅");
+        showWinner(data);
+      }
+    } catch (e){
+      display.textContent = "—";
+      setStatus("Erro ao sortear");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  if (btn){
+    btn.addEventListener('click', doSorteio);
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1433 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ rifa.titulo }} • Rifas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#12141a;
+      --card:#1b1e25;
+      --card2:#181b22;
+      --ink:#fff;
+      --muted:#9ca3af;
+      --green:#22c55e;
+      --yellow:#facc15;
+      --danger:#ef4444;
+      --radius:16px;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100vh;
+    }
+    .topbar{
+      padding:12px 14px 4px;
+      background:linear-gradient(180deg,#12141a 0%,rgba(18,20,26,0) 100%);
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .topbar-title{font-weight:600;font-size:1rem;}
+    .support-btn{
+      margin-left:auto;
+      background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.25) 0, rgba(255,255,255,0) 40%), linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:999px;
+      padding:5px 16px 5px 10px;
+      font-size:.7rem;
+      display:flex;
+      gap:7px;
+      align-items:center;
+      cursor:pointer;
+      color:#041308;
+      box-shadow:0 8px 25px rgba(0,0,0,.25);
+      transition:.12s;
+    }
+    .support-btn:hover{filter:brightness(1.02);}
+    .support-icon-circle{
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      background:rgba(0,0,0,.08);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .support-icon-circle svg{width:15px;height:15px;}
+    .hero{
+      margin:0 14px;
+      border-radius:22px;
+      overflow:hidden;
+      background:var(--card);
+    }
+    .hero-img{
+      width:100%;
+      aspect-ratio: 16/9;
+      object-fit:cover;
+      background:#1b1e25;
+      display:block;
+    }
+    .hero-body{padding:12px 14px 16px;}
+    .tag-green{
+      display:inline-block;
+      background:#22c55e;
+      color:#000;
+      padding:3px 8px;
+      border-radius:999px;
+      font-size:.65rem;
+      font-weight:600;
+      margin-bottom:6px;
+      animation:pulseTag 1.5s ease-in-out infinite;
+    }
+    @keyframes pulseTag{
+      0%,100%{transform:scale(1); filter:brightness(1);}
+      50%{transform:scale(1.05); filter:brightness(1.08);}
+    }
+    .tag-alerta{
+      background:#f97316 !important;
+      color:#0f172a !important;
+      animation:blinkAlert 1s ease-in-out infinite;
+    }
+    @keyframes blinkAlert{
+      0%,100%{opacity:1;}
+      50%{opacity:.25;}
+    }
+    .title{font-size:1.15rem;font-weight:700;margin-bottom:4px;}
+    .price-line{display:flex;align-items:center;gap:6px;margin-top:4px;}
+    .price-chip{
+      background:#000;
+      padding:3px 12px 4px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:.78rem;
+    }
+    .desc-box{
+      background:#14171d;
+      border:1px solid rgba(255,255,255,.02);
+      border-radius:14px;
+      padding:10px 12px;
+      font-size:.7rem;
+      line-height:1.25rem;
+      margin-top:10px;
+      max-height:110px;
+      overflow:auto;
+      scrollbar-width:none;
+    }
+    .my-nums-btn{
+      background:var(--green);
+      border:1px solid rgba(0,0,0,.05);
+      border-radius:14px;
+      padding:9px 10px 10px;
+      display:block;
+      width:100%;
+      text-align:center;
+      margin-bottom:10px;
+      font-weight:700;
+      font-size:.82rem;
+      color:#000;
+      text-transform:uppercase;
+      letter-spacing:.02em;
+      cursor:pointer;
+      transition:.12s;
+    }
+    .my-nums-btn:hover{filter:brightness(.97);}
+    .top-box{margin-top:10px;}
+    .top-box-title{
+      font-size:.72rem;
+      font-weight:600;
+      margin-bottom:6px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .top-cards{display:flex;gap:6px;flex-wrap:wrap;}
+    .top-card{
+      border-radius:12px;
+      padding:5px 4px 6px;
+      flex:1 1 calc(33.333% - 4px);
+      min-width:85px;
+      text-align:center;
+      color:#000;
+      font-weight:600;
+    }
+    .top-card.pos-1{background:#facc15;}
+    .top-card.pos-2{background:#94a3b8;}
+    .top-card.pos-3{background:#f472b6;}
+    .top-medal{font-size:1.25rem;line-height:1;margin-bottom:2px;display:block;}
+    .top-name{font-weight:700;font-size:.68rem;line-height:1rem;letter-spacing:.03em;color:#000;}
+    .top-qtd{margin-top:2px;font-size:.58rem;color:rgba(0,0,0,.6);}
+    .promo-prize-box{
+      margin-top:14px;
+      background:radial-gradient(circle at 4% 12%, rgba(250,204,21,.24) 0%, rgba(12,15,20,0) 55%), rgba(12,15,20,.4);
+      border:1px solid rgba(250,204,21,.25);
+      border-radius:16px;
+      padding:12px 12px 12px;
+      text-align:center;
+    }
+    .promo-prize-head{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+    }
+    .promo-prize-title{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      font-weight:700;
+      font-size:.78rem;
+      letter-spacing:.02em;
+    }
+    .promo-prize-sub{
+      font-size:.62rem;
+      color:rgba(255,255,255,.65);
+      line-height:1.1rem;
+      max-width:260px;
+    }
+    .promo-prize-badge{
+      background:rgba(34,197,94,1);
+      color:#041308;
+      font-size:.58rem;
+      padding:2px 8px 3px;
+      border-radius:999px;
+      font-weight:700;
+      text-transform:uppercase;
+      margin-top:2px;
+    }
+    .promo-prize-list{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:center;
+    }
+    .promo-prize-card{
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px;
+      min-width:110px;
+      padding:5px 12px 6px;
+      text-align:center;
+    }
+    .promo-prize-label{
+      font-size:.55rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(255,255,255,.55);
+      margin-bottom:1px;
+      display:block;
+    }
+    .promo-prize-value{
+      font-size:.85rem;
+      font-weight:700;
+      color:#fff;
+      line-height:1.05rem;
+    }
+    .section{
+      margin:14px;
+      background:var(--card);
+      border-radius:20px;
+    }
+    .section-h{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px 4px;
+    }
+    .section-h .title-sm{font-weight:600;}
+    .status-tabs{
+      display:flex;
+      gap:10px;
+      padding:6px 14px 10px;
+      justify-content:center;
+      text-align:center;
+    }
+    .status-pill{
+      width:96px;
+      border-radius:16px;
+      padding:6px 4px 7px;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      justify-content:center;
+      align-items:center;
+      cursor:pointer;
+      transition:.12s ease-out;
+      color:#000;
+      border:1px solid rgba(0,0,0,.12);
+    }
+    .status-pill small{font-size:.6rem;text-transform:uppercase;letter-spacing:.03em;}
+    .status-pill strong{font-size:1.05rem;line-height:1.1;}
+    .status-pill.free{background:#22c55e;}
+    .status-pill.res{background:#facc15;}
+    .status-pill.pay{background:#ef4444;color:#fff;border-color:rgba(0,0,0,.05);}
+    .status-pill.active{
+      transform:translateY(-2px);
+      box-shadow:0 10px 25px rgba(0,0,0,.25);
+    }
+    .progress-bar-wrap{
+      background:rgba(255,255,255,.02);
+      border-radius:999px;
+      margin:4px 14px 14px;
+      height:14px;
+      overflow:hidden;
+      display:flex;
+    }
+    .pb-paid{background:var(--green);}
+    .pb-res{background:var(--yellow);}
+    .pb-free{background:rgba(255,255,255,.04);flex:1;}
+    .pct-label{text-align:right;font-size:.65rem;color:var(--muted);margin:0 14px 8px;}
+    .numbers-wrap{
+      padding:0 14px 90px;
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:7px;
+    }
+    .num-btn{
+      background:#1f222a;
+      border:1px solid rgba(0,0,0,.25);
+      border-radius:12px;
+      text-align:center;
+      padding:9px 4px 6px;
+      font-weight:600;
+      font-size:.8rem;
+      cursor:pointer;
+      transition:.12s;
+      user-select:none;
+      position:relative;
+      color:#fff;
+    }
+    .num-btn:hover{background:#272b34;}
+    .num-reservado{background:#facc15;color:#000;border-color:rgba(0,0,0,.12);cursor:not-allowed;}
+    .num-pago{background:#22c55e;color:#000;border-color:rgba(0,0,0,.12);cursor:not-allowed;}
+    .num-selected{background:var(--green);color:#000;border-color:transparent;}
+    .all-taken{
+      grid-column:1/-1;
+      background:rgba(34,197,94,.08);
+      border:1px solid rgba(34,197,94,.25);
+      border-radius:14px;
+      padding:10px 10px 9px;
+      text-align:center;
+      font-size:.78rem;
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      align-items:center;
+      color:#fff;
+    }
+    .hide{display:none !important;}
+    .page-bottom-safe{height:110px;}
+    @media(min-width:520px){
+      .numbers-wrap{grid-template-columns:repeat(5,minmax(0,1fr));}
+    }
+    @media(min-width:768px){
+      .numbers-wrap{grid-template-columns:repeat(7,minmax(0,1fr));}
+      body{max-width:580px;margin:0 auto;background:#0e1015;}
+    }
+    .checkout-bar{
+      position:fixed;left:0;right:0;bottom:0;
+      background:linear-gradient(180deg,rgba(18,20,26,0) 0%, #12141a 22%, #12141a 100%);
+      padding:10px 14px 14px;
+      z-index:30;
+    }
+    .checkout-card{
+      background:var(--card);
+      border:1px solid rgba(255,255,255,.03);
+      border-radius:18px;
+      padding:8px 10px;
+    }
+    .selected-list{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-bottom:6px;
+    }
+    .selected-chip{
+      background:#0f1115;
+      border:1px solid rgba(255,255,255,.02);
+      border-radius:10px;
+      padding:2px 9px 3px;
+      font-size:.7rem;
+    }
+    .pay-btn{
+      width:100%;
+      background:var(--green);
+      border:none;
+      border-radius:14px;
+      padding:11px 10px 11px;
+      font-weight:700;
+      font-size:.9rem;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      cursor:pointer;
+      color:#000;
+    }
+    .pay-btn small{font-size:.68rem;font-weight:500;opacity:.75;}
+    .fab-wrap{
+      position:fixed;
+      right:14px;
+      bottom:110px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index:35;
+    }
+    .fab-btn{
+      background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.25) 0, rgba(255,255,255,0) 40%), linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:999px;
+      padding:5px 14px 5px 8px;
+      font-size:.7rem;
+      display:flex;
+      gap:7px;
+      align-items:center;
+      cursor:pointer;
+      color:#041308;
+      box-shadow:0 8px 25px rgba(0,0,0,.25);
+      transition:.12s;
+      text-decoration:none;
+      min-height:38px;
+    }
+    .fab-btn:hover{filter:brightness(1.02);}
+    .fab-btn .support-icon-circle{background:rgba(0,0,0,.12);}
+    .fab-label{white-space:nowrap;font-weight:600;}
+    .modal-back{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:90;
+      padding:14px;
+    }
+    .modal-box{
+      background:#14171d;
+      width:100%;
+      max-width:520px;
+      border-radius:18px;
+      padding:16px 16px 18px;
+      position:relative;
+      border:1px solid rgba(255,255,255,.02);
+    }
+    .modal-title{font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+    .modal-title-icon{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      background:rgba(34,197,94,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.2rem;
+    }
+    .form-group{margin-bottom:10px;}
+    .form-group label{font-size:.78rem;display:block;margin-bottom:3px;color:var(--muted);}
+    .form-control{
+      width:100%;
+      background:#0f1115;
+      border:1px solid rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:7px 10px 7px 34px;
+      color:#fff;
+      font-size:.82rem;
+      position:relative;
+    }
+    .input-wrap{position:relative;}
+    .input-icon{
+      position:absolute;
+      top:50%;
+      left:10px;
+      transform:translateY(-50%);
+      opacity:.35;
+      width:16px;
+      height:16px;
+    }
+    .input-icon svg{width:100%;height:100%;}
+    .btn-primary{
+      background:linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+      border:none;
+      color:#000;
+      font-weight:700;
+      width:100%;
+      border-radius:14px;
+      padding:10px 8px;
+      font-size:.9rem;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+    }
+    .btn-primary svg{width:14px;height:14px;}
+    .close-modal{background:transparent;border:none;color:#fff;font-size:1.15rem;position:absolute;top:10px;right:10px;cursor:pointer;}
+    .small-muted{font-size:.7rem;color:var(--muted);}
+    .result-box{
+      background:#0f1115;
+      border:1px solid rgba(255,255,255,.02);
+      border-radius:14px;
+      padding:6px 8px 4px;
+      max-height:180px;
+      overflow:auto;
+    }
+    .result-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-size:.7rem;
+      padding:3px 0;
+      border-bottom:1px solid rgba(255,255,255,.03);
+    }
+    .result-item:last-child{border-bottom:none;}
+    .badge{
+      display:inline-block;
+      border-radius:999px;
+      padding:1px 8px 2px;
+      font-size:.6rem;
+      font-weight:600;
+    }
+    .badge-pago{background:rgba(34,197,94,1);color:#000;}
+    .badge-res{background:rgba(250,204,21,1);color:#000;}
+    .step-header{
+      background:rgba(15,23,42,.35);
+      border:1px solid rgba(148,163,184,.08);
+      border-radius:14px;
+      padding:6px 10px 7px;
+      font-size:.68rem;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-bottom:10px;
+    }
+    .step-badge{
+      width:21px;
+      height:21px;
+      border-radius:999px;
+      background:rgba(34,197,94,.2);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:.6rem;
+      font-weight:700;
+      color:#22c55e;
+    }
+    .two-cols{display:flex;gap:10px;flex-wrap:wrap;}
+    .two-cols .form-group{flex:1 1 calc(50% - 5px);}
+    @media(max-width:480px){
+      .two-cols{flex-direction:column;}
+      .form-control{padding-left:34px;}
+      .fab-label{display:none;}
+    }
+    /* bloco de pagamento EFI */
+    .pix-box{
+      background:rgba(15,23,42,.35);
+      border:1px solid rgba(148,163,184,.08);
+      border-radius:14px;
+      padding:10px 10px 12px;
+      margin-top:10px;
+    }
+    .pix-title{font-weight:700;font-size:.8rem;margin-bottom:6px;}
+    .pix-textarea{
+      width:100%;
+      background:#0f1115;
+      border:1px solid rgba(255,255,255,.03);
+      border-radius:10px;
+      color:#fff;
+      font-size:.68rem;
+      padding:6px 8px;
+      resize:vertical;
+      min-height:80px;
+    }
+    .pix-qr{text-align:center;margin-top:8px;}
+    .pix-qr img{
+      max-width:180px;
+      border-radius:10px;
+      background:#fff;
+      padding:4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-title">Rifas • {{ rifa.titulo }}</div>
+    <button class="support-btn" onclick="openSupport()">
+      <span class="support-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 11a9 9 0 1 1 18 0v5.5a2.5 2.5 0 0 1-5 0V12" />
+          <path d="M3 11v5.5a2.5 2.5 0 0 0 5 0V12" />
+        </svg>
+      </span>
+      Suporte
+    </button>
+  </div>
+
+  <div class="hero">
+    {% if rifa.banner %}
+      <img src="{{ rifa.banner.url }}" class="hero-img" alt="{{ rifa.titulo }}">
+    {% else %}
+      <img src="{% static 'rifas/img/placeholder-rifa.jpg' %}"
+           onerror="this.onerror=null;this.src='{% static 'rifas/img/placeholder.jpg' %}';"
+           class="hero-img"
+           alt="{{ rifa.titulo }}">
+    {% endif %}
+    <div class="hero-body">
+      <div class="my-nums-btn" onclick="openMyNumbers()">VER MEUS NÚMEROS</div>
+      <span class="tag-green" id="cta-tag">Adquira já!</span>
+      <div class="title">{{ rifa.titulo }}</div>
+      <div class="price-line">
+        <span>por apenas</span>
+        <span class="price-chip">R$ {{ rifa.preco_numero }}</span>
+      </div>
+      {% if rifa.descricao %}
+        <div class="desc-box">{{ rifa.descricao|linebreaksbr }}</div>
+      {% endif %}
+
+      {% if mostrar_top_compradores and top_compradores %}
+        <div class="top-box">
+          <div class="top-box-title">🏆 Top compradores</div>
+          <div class="top-cards">
+            {% for item in top_compradores|slice:":3" %}
+              <div class="top-card pos-{{ forloop.counter }}">
+                {% if forloop.counter == 1 %}
+                  <span class="top-medal">🥇</span>
+                {% elif forloop.counter == 2 %}
+                  <span class="top-medal">🥈</span>
+                {% else %}
+                  <span class="top-medal">🥉</span>
+                {% endif %}
+                <div class="top-name">{{ item.primeiro_nome|default:item.nome|default:"CLIENTE"|upper }}</div>
+                <div class="top-qtd">{{ item.qtd }} número(s)</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if cotas_premiadas %}
+        <div class="promo-prize-box">
+          <div class="promo-prize-head">
+            <div class="promo-prize-title">
+              <span>🎉</span>
+              <span>Essa ação tem números premiados!</span>
+            </div>
+            <div class="promo-prize-sub">
+              Garanta o seu número e participe também dos <strong style="color:#fff;font-weight:600;">prêmios instantâneos</strong>.
+            </div>
+            <div class="promo-prize-badge">
+              até {{ cotas_premiadas|length }} prêmio(s)
+            </div>
+          </div>
+          <div class="promo-prize-list">
+            {% for cota in cotas_premiadas %}
+              <div class="promo-prize-card">
+                <span class="promo-prize-label">prêmio</span>
+                <span class="promo-prize-value">R$ {{ cota.valor_premio|floatformat:2 }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-h">
+      <span class="title-sm">⚡ Cotas</span>
+      <span style="font-size:.7rem;color:var(--muted);">Escolha sua sorte</span>
+    </div>
+
+    <div class="status-tabs">
+      <div class="status-pill free active" id="tab-livres" onclick="setFilter('livre')">
+        <small>Livres</small>
+        <strong id="stat-livres">{{ livres }}</strong>
+      </div>
+      <div class="status-pill res" id="tab-reservados" onclick="setFilter('reservado')">
+        <small>Reservados</small>
+        <strong id="stat-reservados">{{ reservados }}</strong>
+      </div>
+      <div class="status-pill pay" id="tab-pagos" onclick="setFilter('pago')">
+        <small>Pagos</small>
+        <strong id="stat-pagos">{{ pagos }}</strong>
+      </div>
+    </div>
+    <div class="pct-label" id="pct-label">0% reservado</div>
+    <div class="progress-bar-wrap">
+      <div class="pb-paid" id="pb-paid" style="width:0%"></div>
+      <div class="pb-res" id="pb-res" style="width:0%"></div>
+      <div class="pb-free"></div>
+    </div>
+
+    <div class="numbers-wrap" id="numbers-wrap">
+      <div style="grid-column:1/-1; text-align:center; color:var(--muted); font-size:.75rem; padding:14px 0;">
+        Carregando números...
+      </div>
+    </div>
+  </div>
+
+  <div class="page-bottom-safe"></div>
+
+  <div class="fab-wrap">
+    {% if rifa.link_grupo %}
+      <a class="fab-btn" href="{{ rifa.link_grupo }}" target="_blank">
+        <span class="support-icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 20v-2a4 4 0 0 1 4-4h0" />
+            <path d="M15 14a4 4 0 0 1 4 4v2" />
+            <circle cx="9" cy="7" r="3" />
+            <circle cx="17" cy="7" r="3" />
+          </svg>
+        </span>
+        <span class="fab-label">Grupo da rifa</span>
+      </a>
+    {% endif %}
+    {% if rifa.link_whatsapp %}
+      <a class="fab-btn" href="{{ rifa.link_whatsapp }}" target="_blank">
+        <span class="support-icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.5 20.5 4 16a8 8 0 1 1 3 2.6z"/>
+            <path d="M9 10.5c.3 1 1.2 2 2.3 2.5.5.2.8.2 1 .2.2-.1.6-.4.8-.6.2-.2.4-.1.6 0l1.3.5c.3.1.5.2.6.3.1.2.1.5 0 .8-.2.7-.8 1.2-1.5 1.3-1 .1-2.5-.1-4-1.2-1.1-.8-2-2.1-2.2-3.3-.1-.6.1-1.2.6-1.6.2-.2.5-.4.7-.4.1 0 .2 0 .3.2.1.1.5.9.6 1.1Z"/>
+          </svg>
+        </span>
+        <span class="fab-label">Falar no Whats</span>
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="checkout-bar">
+    <div class="checkout-card">
+      <div class="selected-list" id="selected-list">
+        <span class="selected-chip" id="selected-empty">Nenhum número selecionado</span>
+      </div>
+      <button class="pay-btn" onclick="openCheckoutModal()">
+        <div>
+          ✅ Quero participar
+          <small id="sel-count">0 número(s)</small>
+        </div>
+        <div id="sel-total">R$ 0,00</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL CHECKOUT -->
+  <div class="modal-back" id="checkout-modal" onclick="backdropClose(event)">
+    <div class="modal-box">
+      <button class="close-modal" onclick="closeCheckoutModal()">×</button>
+      <div class="modal-title">
+        <span class="modal-title-icon">🧍</span>
+        Finalizar participação
+      </div>
+      <!-- STEP 1 -->
+      <div id="step-cpf">
+        <p class="small-muted">Digite seu CPF para continuar. Se já tiver cadastro, vamos direto pro pagamento.</p>
+        <div class="form-group">
+          <label>CPF</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+              </svg>
+            </span>
+            <input type="text" id="cli-cpf" class="form-control" placeholder="000.000.000-00" inputmode="numeric" maxlength="14">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="checkCPF()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12l5 5L20 7"/>
+          </svg>
+          Continuar
+        </button>
+      </div>
+      <!-- STEP 2 -->
+      <div id="step-dados" class="hide">
+        <div class="step-header">
+          <span class="step-badge">2</span>
+          Complete seus dados para continuar
+        </div>
+        <p class="small-muted" style="margin-bottom:12px;">Não encontramos esse CPF. Informe seus dados e já vamos reservar seus números.</p>
+        <div class="form-group">
+          <label>Nome completo</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+              </svg>
+            </span>
+            <input type="text" id="cli-nome" class="form-control" placeholder="Seu nome completo">
+          </div>
+        </div>
+        <div class="two-cols">
+          <div class="form-group">
+            <label>WhatsApp</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3.5 20.5 4 16a8 8 0 1 1 3 2.6z"/>
+                  <path d="M9 10.5c.3 1 1.2 2 2.3 2.5.5.2.8.2 1 .2.2-.1.6-.4.8-.6.2-.2.4-.1.6 0l1.3.5c.3.1.5.2.6.3.1.2.1.5 0 .8-.2.7-.8 1.2-1.5 1.3-1 .1-2.5-.1-4-1.2-1.1-.8-2-2.1-2.2-3.3-.1-.6.1-1.2.6-1.6.2-.2.5-.4.7-.4.1 0 .2 0 .3.2.1.1.5.9.6 1.1Z"/>
+              </span>
+              <input type="text" id="cli-tel" class="form-control" placeholder="(63) 9 9999-9999" inputmode="numeric" maxlength="16">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CPF</label>
+            <div class="input-wrap">
+              <span class="input-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="7" r="4"></circle>
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+                </svg>
+              </span>
+              <input type="text" id="cli-cpf-duplicado" class="form-control" placeholder="000.000.000-00" inputmode="numeric" maxlength="14" disabled>
+            </div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="sendCheckout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12l5 5L20 7"/>
+          </svg>
+          Ir para pagamento (PIX EFI)
+        </button>
+      </div>
+      <!-- STEP 3 – PAGAMENTO EFI (vai ficar aqui, mas agora o fluxo redireciona) -->
+      <div id="step-pagamento" class="hide">
+        <div class="step-header">
+          <span class="step-badge">3</span>
+          Faça o pagamento para confirmar
+        </div>
+        <p class="small-muted">Copie o código PIX abaixo e pague no seu banco. Assim que o pagamento for identificado, seus números serão confirmados.</p>
+        <div class="pix-box">
+          <div class="pix-title">PIX Copia e Cola</div>
+          <textarea id="efi-copia" class="pix-textarea" readonly></textarea>
+          <button class="btn-primary" style="margin-top:6px;" onclick="copyEfiPix()">Copiar código PIX</button>
+          <div id="efi-qr" class="pix-qr" style="display:none;"></div>
+          <div class="small-muted" id="efi-protocolo" style="margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MEUS NÚMEROS -->
+  <div class="modal-back" id="my-numbers-modal" onclick="backdropCloseMy(event)">
+    <div class="modal-box">
+      <button class="close-modal" onclick="closeMyNumbers()">×</button>
+      <div class="modal-title">
+        <span class="modal-title-icon">🔎</span>
+        Meus números
+      </div>
+      <p class="small-muted">Digite o mesmo CPF usado na compra desta rifa.</p>
+      <div class="form-group">
+        <label>CPF</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="7" r="4"></circle>
+              <path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path>
+            </svg>
+          </span>
+          <input type="text" id="my-cpf" class="form-control" placeholder="000.000.000-00" inputmode="numeric" maxlength="14">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="fetchMyNumbers()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="5"></circle>
+          <path d="m16 16 3.5 3.5"/>
+        </svg>
+        Consultar
+      </button>
+      <div id="my-results" class="result-box" style="margin-top:10px; display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    const slug = "{{ rifa.slug }}";
+    const price = parseFloat("{{ rifa.preco_numero }}".replace(",", ".")) || 0;
+    const totalNumeros = {{ total_numeros|default:0 }};
+    let selected = [];
+    let allNumbers = [];
+    let currentFilter = "livre";
+    let lastFreeCount = null;
+
+    function money(v){return "R$ " + v.toFixed(2).replace(".", ",");}
+
+    function renderSelected(){
+      const wrap = document.getElementById("selected-list");
+      wrap.innerHTML = "";
+      if(selected.length === 0){
+        const span = document.createElement("span");
+        span.className = "selected-chip";
+        span.textContent = "Nenhum número selecionado";
+        wrap.appendChild(span);
+      }else{
+        selected.sort((a,b)=>a-b).forEach(n=>{
+          const s = document.createElement("span");
+          s.className = "selected-chip";
+          s.textContent = "#"+n;
+          wrap.appendChild(s);
+        });
+      }
+      document.getElementById("sel-count").textContent = selected.length + " número(s)";
+      document.getElementById("sel-total").textContent = money(price * selected.length);
+    }
+
+    function toggleNumber(n, el){
+      if(el.classList.contains("num-reservado") || el.classList.contains("num-pago")){
+        return;
+      }
+      const idx = selected.indexOf(n);
+      if(idx >= 0){
+        selected.splice(idx,1);
+        el.classList.remove("num-selected");
+      }else{
+        selected.push(n);
+        el.classList.add("num-selected");
+      }
+      renderSelected();
+    }
+
+    function normalizeGradePayload(data){
+      if(!data) return [];
+      if(Array.isArray(data)) return data;
+      if(Array.isArray(data.numeros)) return data.numeros;
+
+      if(Array.isArray(data.livres) || Array.isArray(data.reservados) || Array.isArray(data.pagos)){
+        const out = [];
+        if(Array.isArray(data.livres)){
+          data.livres.forEach(n=>{
+            if(typeof n === "number"){ out.push({numero:n, status:"livre"}); }
+            else{ out.push({...n, status:(n.status || "livre")}); }
+          });
+        }
+        if(Array.isArray(data.reservados)){
+          data.reservados.forEach(n=>{
+            if(typeof n === "number"){ out.push({numero:n, status:"reservado"}); }
+            else{ out.push({...n, status:(n.status || "reservado")}); }
+          });
+        }
+        if(Array.isArray(data.pagos)){
+          data.pagos.forEach(n=>{
+            if(typeof n === "number"){ out.push({numero:n, status:"pago"}); }
+            else{ out.push({...n, status:(n.status || "pago")}); }
+          });
+        }
+        return out;
+      }
+
+      if(Array.isArray(data.results)) return data.results;
+      if(Array.isArray(data.data)) return data.data;
+
+      return [];
+    }
+
+    function mapStatus(raw){
+      if(raw === null || raw === undefined) return "livre";
+
+      if(typeof raw === "number"){
+        if(raw === 0) return "livre";
+        if(raw === 1) return "reservado";
+        if(raw === 2) return "pago";
+      }
+
+      const st = raw.toString().toLowerCase().trim();
+      if(!st) return "livre";
+      if(st === "0" || st === "livre" || st === "disponivel" || st === "disponível") return "livre";
+      if(st === "1" || st.startsWith("res") || st.includes("aguard") || st.includes("pend")) return "reservado";
+      if(st === "2" || st.startsWith("pag") || st === "pago") return "pago";
+      return "livre";
+    }
+
+    function showAllTaken(show){
+      let msg = document.getElementById("all-taken");
+      const wrap = document.getElementById("numbers-wrap");
+      if(!msg){
+        msg = document.createElement("div");
+        msg.id = "all-taken";
+        msg.className = "all-taken";
+        msg.innerHTML = "✅ Todos os números estão <strong style='font-weight:700;'>reservados ou pagos</strong>. Aguarde o sorteio.";
+        wrap.prepend(msg);
+      }
+      if(show){
+        msg.classList.remove("hide");
+      }else{
+        msg.classList.add("hide");
+      }
+    }
+
+    function renderNumbers(filter = "livre"){
+      const box = document.getElementById("numbers-wrap");
+      box.innerHTML = "";
+
+      if(!allNumbers || allNumbers.length === 0){
+        box.innerHTML = "<div style='grid-column:1/-1; color:#f87171; text-align:center; padding:12px 0;'>Nenhum número.</div>";
+        return;
+      }
+
+      let rendered = 0;
+
+      allNumbers.forEach(item=>{
+        let n;
+        if(typeof item === "number"){
+          n = item;
+          item = {numero:item, status:"livre"};
+        }else{
+          n = item.numero || item.num || item.n || item.id;
+        }
+
+        const stNorm = mapStatus(item.status);
+
+        if(filter === "livre" && stNorm !== "livre") return;
+        if(filter === "reservado" && stNorm !== "reservado") return;
+        if(filter === "pago" && stNorm !== "pago") return;
+
+        const btn = document.createElement("div");
+        btn.textContent = n;
+        btn.className = "num-btn";
+
+        if(stNorm === "reservado"){
+          btn.classList.add("num-reservado");
+        }else if(stNorm === "pago"){
+          btn.classList.add("num-pago");
+        }else{
+          btn.classList.add("num-livre");
+          btn.addEventListener("click", ()=>toggleNumber(parseInt(n,10), btn));
+        }
+
+        box.appendChild(btn);
+        rendered++;
+      });
+
+      if(rendered === 0){
+        box.innerHTML = "<div style='grid-column:1/-1; color:#9ca3af; text-align:center; padding:14px 0;'>Nenhum número nesse status.</div>";
+      }
+
+      if(lastFreeCount !== null){
+        showAllTaken(lastFreeCount === 0);
+      }
+    }
+
+    async function loadGrade(){
+      const box = document.getElementById("numbers-wrap");
+      try{
+        const resp = await fetch(`/api/rifas/${slug}/grade/`, {headers:{"Accept":"application/json"}});
+        if(!resp.ok){
+          renderFallbackNumbers();
+          return;
+        }
+        const data = await resp.json();
+        const nums = normalizeGradePayload(data);
+
+        if(!nums || nums.length === 0){
+          if(totalNumeros > 0){ renderFallbackNumbers(); return; }
+          box.innerHTML = "<div style='grid-column:1/-1; color:#f87171;'>Nenhum número retornado.</div>";
+          return;
+        }
+
+        allNumbers = nums;
+
+        let free=0,res=0,pay=0;
+        nums.forEach(item=>{
+          const stNorm = mapStatus(item.status);
+          if(stNorm === "reservado") res++;
+          else if(stNorm === "pago") pay++;
+          else free++;
+        });
+
+        lastFreeCount = free;
+
+        document.getElementById("stat-livres").textContent = free;
+        document.getElementById("stat-reservados").textContent = res;
+        document.getElementById("stat-pagos").textContent = pay;
+
+        const tot = free+res+pay;
+        const pbPaid = document.getElementById("pb-paid");
+        const pbRes = document.getElementById("pb-res");
+        const pctLabel = document.getElementById("pct-label");
+        if(tot>0){
+          const pctPaid = (pay/tot)*100;
+          const pctRes  = (res/tot)*100;
+          pbPaid.style.width = pctPaid+"%";
+          pbRes.style.width  = pctRes+"%";
+          const pctTotal = (pctPaid+pctRes);
+          pctLabel.textContent = pctTotal.toFixed(1) + "% reservado";
+
+          if(pctTotal >= 80){
+            const tag = document.getElementById("cta-tag");
+            if(tag){
+              tag.textContent = "⚠️ Corra, está quase acabando!";
+              tag.classList.add("tag-alerta");
+            }
+          }
+        }
+
+        renderNumbers("livre");
+        showAllTaken(free === 0);
+
+      }catch(e){
+        console.warn(e);
+        renderFallbackNumbers();
+      }
+    }
+
+    function renderFallbackNumbers(){
+      const box = document.getElementById("numbers-wrap");
+      box.innerHTML = "";
+      let free = 0;
+      for(let i=1;i<=totalNumeros;i++){
+        const btn = document.createElement("div");
+        btn.textContent = i;
+        btn.className = "num-btn num-livre";
+        btn.addEventListener("click", ()=>toggleNumber(i, btn));
+        box.appendChild(btn);
+        free++;
+      }
+      lastFreeCount = free;
+      document.getElementById("stat-livres").textContent = free;
+      document.getElementById("stat-reservados").textContent = 0;
+      document.getElementById("stat-pagos").textContent = 0;
+      document.getElementById("pb-paid").style.width = "0%";
+      document.getElementById("pb-res").style.width = "0%";
+      document.getElementById("pct-label").textContent = "0% reservado";
+      showAllTaken(free === 0);
+    }
+
+    function setFilter(filterName){
+      currentFilter = filterName;
+      document.getElementById("tab-livres").classList.remove("active");
+      document.getElementById("tab-reservados").classList.remove("active");
+      document.getElementById("tab-pagos").classList.remove("active");
+      if(filterName === "livre") document.getElementById("tab-livres").classList.add("active");
+      if(filterName === "reservado") document.getElementById("tab-reservados").classList.add("active");
+      if(filterName === "pago") document.getElementById("tab-pagos").classList.add("active");
+      renderNumbers(filterName);
+    }
+
+    function openCheckoutModal(){
+      if(selected.length === 0){
+        alert("Selecione pelo menos 1 número.");
+        return;
+      }
+      document.getElementById("checkout-modal").style.display = "flex";
+      document.getElementById("step-cpf").classList.remove("hide");
+      document.getElementById("step-dados").classList.add("hide");
+      document.getElementById("step-pagamento").classList.add("hide");
+      document.getElementById("cli-cpf").focus();
+    }
+    function closeCheckoutModal(){document.getElementById("checkout-modal").style.display = "none";}
+    function backdropClose(ev){if(ev.target.id === "checkout-modal"){closeCheckoutModal();}}
+
+    function openMyNumbers(){
+      document.getElementById("my-numbers-modal").style.display = "flex";
+      document.getElementById("my-cpf").focus();
+    }
+    function closeMyNumbers(){
+      document.getElementById("my-numbers-modal").style.display = "none";
+    }
+    function backdropCloseMy(ev){
+      if(ev.target.id === "my-numbers-modal"){
+        closeMyNumbers();
+      }
+    }
+
+    function maskCPF(value){
+      return value
+        .replace(/\D/g, "")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+        .slice(0,14);
+    }
+    function maskPhone(value){
+      value = value.replace(/\D/g, "");
+      if(value.length <= 10){
+        value = value.replace(/(\d{2})(\d)/, "($1) $2");
+        value = value.replace(/(\d{4})(\d)/, "$1-$2");
+      }else{
+        value = value.replace(/(\d{2})(\d)/, "($1) $2");
+        value = value.replace(/(\d{1})(\d{4})(\d)/, "$1 $2-$3");
+      }
+      return value;
+    }
+    function toTitleCase(str){
+      if(!str) return "";
+      const lowerWords = ["de","da","do","das","dos","e"];
+      return str
+        .toLowerCase()
+        .split(" ")
+        .filter(Boolean)
+        .map((w,idx)=>{
+          if(idx > 0 && lowerWords.includes(w)) return w;
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        })
+        .join(" ");
+    }
+
+    async function fetchMyNumbers(){
+      const input = document.getElementById("my-cpf");
+      const cpf = (input.value || "").trim();
+      const box = document.getElementById("my-results");
+      if(!cpf){
+        alert("Informe o CPF.");
+        input.focus();
+        return;
+      }
+      box.style.display = "block";
+      box.innerHTML = "<div style='font-size:.7rem;color:#fff;'>Buscando...</div>";
+      try{
+        const resp = await fetch(`/api/rifas/${slug}/meus-numeros/?cpf=${encodeURIComponent(cpf)}`);
+        const data = await resp.json();
+        if(!data.ok){
+          box.innerHTML = "<div style='font-size:.7rem;color:#fca5a5;'>Não foi possível localizar este CPF nesta rifa.</div>";
+          return;
+        }
+        if(!data.numeros || data.numeros.length === 0){
+          box.innerHTML = "<div style='font-size:.7rem;color:#e2e8f0;'>Nenhum número encontrado para este CPF nesta rifa.</div>";
+          return;
+        }
+        let html = "";
+        data.numeros.forEach(item=>{
+          const badge = item.status === "PAGO" ? "<span class='badge badge-pago'>pago</span>" : "<span class='badge badge-res'>reservado</span>";
+          const prot = item.protocolo ? ` <small style="color:rgba(255,255,255,.4);">(${item.protocolo})</small>` : "";
+          html += `<div class="result-item">
+                      <span>#${item.numero}</span>
+                      <span>${badge}${prot}</span>
+                   </div>`;
+        });
+        box.innerHTML = html;
+      }catch(e){
+        console.error(e);
+        box.innerHTML = "<div style='font-size:.7rem;color:#fca5a5;'>Erro ao buscar seus números.</div>";
+      }
+    }
+
+    // pega detalhes do pedido (tenta v2 primeiro, depois v1)
+    async function fetchPedidoDetalhe(protocolo){
+      let resp = await fetch(`/api/v2/pedidos/${protocolo}/`, {
+        headers: {"Accept":"application/json"}
+      });
+      if (resp.ok){
+        return await resp.json();
+      }
+      resp = await fetch(`/api/pedidos/${protocolo}/`, {
+        headers: {"Accept":"application/json"}
+      });
+      if (resp.ok){
+        return await resp.json();
+      }
+      return {protocolo: protocolo};
+    }
+
+    // mostra pagamento no modal (deixei aqui se você quiser voltar a usar)
+    function showEfiPayment(data){
+      document.getElementById("step-cpf").classList.add("hide");
+      document.getElementById("step-dados").classList.add("hide");
+      const stepPay = document.getElementById("step-pagamento");
+      stepPay.classList.remove("hide");
+
+      const txt = document.getElementById("efi-copia");
+      const qrBox = document.getElementById("efi-qr");
+      const protBox = document.getElementById("efi-protocolo");
+
+      const copia = data.copia_cola || data.pix_code || data.copiaCola || data.pixCopiaECola || "";
+      txt.value = copia;
+
+      const rawQr = data.qr_code_base64 || data.pix_qr || data.qrcodeBase64 || "";
+      if(rawQr){
+        qrBox.style.display = "block";
+        const src = rawQr.startsWith("data:") ? rawQr : `data:image/png;base64,${rawQr}`;
+        qrBox.innerHTML = `<img src="${src}" alt="PIX">`;
+      }else{
+        qrBox.style.display = "none";
+        qrBox.innerHTML = "";
+      }
+
+      if(protBox && (data.protocolo || data.reference_id)){
+        protBox.textContent = "Protocolo: " + (data.protocolo || data.reference_id);
+      }
+
+      selected = [];
+      renderSelected();
+      setTimeout(loadGrade, 2000);
+    }
+
+    function copyEfiPix(){
+      const txt = document.getElementById("efi-copia");
+      if(!txt || !txt.value){return;}
+      txt.select();
+      txt.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("Código PIX copiado!");
+    }
+
+    // cria pedido no backend
+    async function createPedidoOnBackend(payload){
+      const body = {...payload};
+
+      if(body.cpf){ body.cpf = body.cpf.replace(/\D/g,""); }
+      if(body.slug){
+        body.rifa_slug = body.slug;
+      }
+      if(Array.isArray(body.numeros)){
+        body.numeros = body.numeros.map(n=>parseInt(n,10));
+      }
+      body.origem = "site";
+
+      let resp = await fetch("/api/v2/pedidos/", {
+        method:"POST",
+        headers:{"Content-Type":"application/json","Accept":"application/json"},
+        body:JSON.stringify(body)
+      });
+
+      if(!resp.ok && resp.status !== 400 && resp.status !== 201){
+        resp = await fetch("/api/pedidos/", {
+          method:"POST",
+          headers:{"Content-Type":"application/json","Accept":"application/json"},
+          body:JSON.stringify(body)
+        });
+      }
+
+      if(!resp.ok){
+        let errText = "";
+        try{
+          const errJson = await resp.json();
+          errText = errJson.detail || JSON.stringify(errJson);
+        }catch(e){
+          errText = await resp.text();
+        }
+        alert("Erro ao criar o pedido:\n" + errText);
+        throw new Error(errText);
+      }
+
+      return await resp.json();
+    }
+
+    // 🔁 NOVO: função central pra redirecionar
+    function goToPaymentPage(protocolo){
+      // aqui você pode trocar pelo que quiser: /pagamento/, /pix/, etc.
+      window.location.href = `/pedido/${protocolo}/`;
+    }
+
+    // CPF já existe
+    async function checkCPF(){
+      const cpfInput = document.getElementById("cli-cpf");
+      const cpf = (cpfInput.value || "").trim();
+      if(!cpf){
+        alert("Informe o CPF.");
+        cpfInput.focus();
+        return;
+      }
+      if(selected.length === 0){
+        alert("Selecione os números antes.");
+        return;
+      }
+
+      try{
+        const resp = await fetch(`/r/${slug}/checkout/?cpf=${encodeURIComponent(cpf)}&json=1`);
+        const data = await resp.json();
+
+        if(data.exists){
+          const pedido = await createPedidoOnBackend({
+            slug: slug,
+            cpf: cpf,
+            numeros: selected
+          });
+
+          if (pedido && pedido.protocolo){
+            goToPaymentPage(pedido.protocolo);
+            return;
+          }
+
+          alert("Pedido criado, mas não foi possível redirecionar para o pagamento.");
+        }else{
+          document.getElementById("step-cpf").classList.add("hide");
+          document.getElementById("step-dados").classList.remove("hide");
+          document.getElementById("step-pagamento").classList.add("hide");
+          document.getElementById("cli-nome").focus();
+          const dup = document.getElementById("cli-cpf-duplicado");
+          if(dup){ dup.value = cpf; }
+        }
+      }catch(e){
+        console.error(e);
+        alert("Erro ao verificar CPF ou criar o pedido.");
+      }
+    }
+
+    // CPF novo
+    async function sendCheckout(){
+      const nomeInput = document.getElementById("cli-nome");
+      const telInput  = document.getElementById("cli-tel");
+      const cpfInput  = document.getElementById("cli-cpf");
+
+      const nome = toTitleCase((nomeInput.value || "").trim());
+      const tel  = (telInput.value || "").trim();
+      const cpf  = (cpfInput.value || "").trim();
+
+      if(!cpf){
+        alert("CPF obrigatório.");
+        document.getElementById("step-cpf").classList.remove("hide");
+        document.getElementById("step-dados").classList.add("hide");
+        return;
+      }
+      if(!nome || !tel){
+        alert("Preencha nome e WhatsApp.");
+        return;
+      }
+      if(selected.length === 0){
+        alert("Selecione pelo menos 1 número.");
+        return;
+      }
+
+      try{
+        const pedido = await createPedidoOnBackend({
+          slug: slug,
+          cpf: cpf,
+          nome: nome,
+          telefone: tel,
+          numeros: selected
+        });
+
+        // agora sempre que criar o pedido, manda pra página de pagamento
+        if (pedido && pedido.protocolo){
+          goToPaymentPage(pedido.protocolo);
+          return;
+        }
+
+        alert("Pedido criado, mas pagamento não foi gerado.");
+      }catch(e){
+        console.error(e);
+      }
+    }
+
+    function openSupport(){
+      {% if rifa.link_whatsapp %}
+        window.open("{{ rifa.link_whatsapp }}", "_blank");
+      {% else %}
+        alert("Contato do suporte não informado.");
+      {% endif %}
+    }
+
+    document.addEventListener("input", function(e){
+      if(e.target.id === "cli-cpf" || e.target.id === "my-cpf" || e.target.id === "cli-cpf-duplicado"){
+        e.target.value = maskCPF(e.target.value);
+      }
+      if(e.target.id === "cli-tel"){
+        e.target.value = maskPhone(e.target.value);
+      }
+    });
+    document.addEventListener("blur", function(e){
+      if(e.target.id === "cli-nome"){
+        e.target.value = toTitleCase(e.target.value);
+      }
+    }, true);
+
+    loadGrade();
+    renderSelected();
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+﻿{# templates/rifas/site/pagamento_pix.html #}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Pagamento • {{ rifa.titulo }}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#0f172a; color:#fff; padding:24px;}
+    .box{max-width:540px; margin:0 auto; background:#111827; border-radius:16px; padding:20px;}
+    textarea{width:100%; min-height:120px; background:#000; color:#0f0; padding:10px; border-radius:8px; border:none;}
+    img.qr{display:block; max-width:220px; margin:16px auto;}
+    .nums span{display:inline-block; background:#1f2937; padding:4px 10px; border-radius:6px; margin:2px;}
+    .btn{display:inline-block; background:#22c55e; color:#000; padding:10px 14px; border-radius:10px; text-decoration:none; font-weight:600;}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Finalizar participação</h2>
+    <p><strong>Rifa:</strong> {{ rifa.titulo }}</p>
+    <p><strong>Cliente:</strong> {{ cliente.nome }} — CPF {{ cliente.cpf }}</p>
+    <p><strong>Protocolo:</strong> {{ pedido.protocolo }}</p>
+    <p><strong>Total:</strong> R$ {{ pedido.total }}</p>
+
+    <p><strong>Números:</strong></p>
+    <div class="nums">
+      {% for n in numeros %}
+        <span>{{ n }}</span>
+      {% endfor %}
+    </div>
+
+    <h3>PIX Copia e Cola</h3>
+    <textarea readonly id="copia">{{ copia_cola }}</textarea>
+    <p><a class="btn" onclick="copiar()">Copiar código PIX</a></p>
+
+    {% if qr_code_base64 %}
+      <h3>QR Code</h3>
+      <img class="qr" src="{{ qr_code_base64 }}" alt="QR Code PIX">
+    {% endif %}
+  </div>
+
+  <script>
+    function copiar(){
+      const t = document.getElementById('copia');
+      t.select();
+      t.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      alert('Código PIX copiado!');
+    }
+  </script>
+</body>
+</html>

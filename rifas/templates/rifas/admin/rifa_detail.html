@@ -1,0 +1,669 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Rifa — {{ rifa.titulo }}{% endblock %}
+{% load ui_extras %}
+
+{% block head_extra %}
+<style>
+  /* HEADER / VOLTAR */
+  .page-head{
+    display:flex;
+    gap:.6rem;
+    align-items:center;
+    margin-bottom:1rem;
+    flex-wrap:wrap;
+  }
+  .page-head-title{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+  .btn-back{
+    background:radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), rgba(15,23,42,.05));
+    border:1px solid rgba(148,163,184,.35);
+    color:#fff !important;
+    border-radius:.75rem;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.4rem .85rem .45rem;
+    text-decoration:none !important;
+    transition:.15s ease;
+  }
+  .btn-back i{ font-size:.9rem; }
+  .btn-back:hover{
+    background:rgba(148,163,184,.14);
+    border-color:rgba(148,163,184,.4);
+    text-decoration:none !important;
+  }
+
+  /* inputs dark */
+  .filter-input,
+  .search{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.08);
+    color:#e2e8f0;
+  }
+  .filter-input:focus,
+  .search:focus{
+    border-color:rgba(148,163,184,.35);
+    background:rgba(15,23,42,.5);
+    box-shadow:none;
+  }
+
+  /* botão padrão do painel */
+  .btn-action{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.35rem;
+    min-height:32px;
+    padding:.35rem .7rem;
+    font-weight:600;
+    border-radius:.65rem;
+    flex:0 0 auto;
+    white-space:nowrap;
+    text-decoration:none !important; /* garante sem sublinhado */
+  }
+
+  /* 3 BOTÕES SÓLIDOS DO TOPO */
+  .btn-admin-config{
+    background:#facc15;
+    border:1px solid rgba(250,204,21,.35);
+    color:#111 !important;
+  }
+  .btn-admin-config:hover{
+    filter:brightness(1.03);
+    color:#000 !important;
+    text-decoration:none !important;
+  }
+
+  .btn-admin-financeiro{
+    background:#0ea5e9;
+    border:1px solid rgba(14,165,233,.35);
+    color:#0f172a !important;
+  }
+  .btn-admin-financeiro:hover{
+    filter:brightness(1.03);
+    text-decoration:none !important;
+  }
+
+  .btn-admin-sorteador{
+    background:#22c55e;
+    border:1px solid rgba(34,197,94,.3);
+    color:#0f172a !important;
+  }
+  .btn-admin-sorteador:hover{
+    filter:brightness(1.03);
+    text-decoration:none !important;
+  }
+  .btn-admin-sorteador.disabled,
+  .btn-admin-sorteador[disabled]{
+    opacity:.45;
+    pointer-events:none;
+    cursor:not-allowed;
+  }
+
+  /* botão whatsapp fixo */
+  .btn-wpp-xs{
+    background:#25d366;
+    border:1px solid #25d366;
+    color:#0f172a !important;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:.25rem;
+    min-height:30px;
+    width:46px;
+    border-radius:.55rem;
+    text-decoration:none !important;
+  }
+  .btn-wpp-xs i{ font-size:1rem; }
+  .btn-wpp-xs:hover{
+    background:#38e379;
+    color:#0f172a !important;
+    text-decoration:none !important;
+  }
+
+  /* progresso */
+  .progress.progress-rifa{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.05);
+    height:14px;
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .progress-rifa .bg-success{ background:#22c55e!important; }
+  .progress-rifa .bg-warning{ background:#facc15!important; }
+
+  /* tabela dark */
+  .table-darkish.table{
+    color:#e2e8f0;
+  }
+  .table-darkish.table thead th{
+    border-bottom:1px solid rgba(148,163,184,.12);
+    color:rgba(226,232,240,.65);
+    background:transparent;
+  }
+  .table-darkish.table tbody td{
+    border-color:rgba(15,23,42,.3);
+  }
+  .table-darkish a{
+    text-decoration:none !important;
+  }
+  .table-darkish a:hover{
+    text-decoration:none !important;
+  }
+
+  .badge-status{
+    font-size:.63rem;
+    padding:.15rem .5rem .1rem;
+    border-radius:.5rem;
+  }
+
+  .col-actions-wpp{
+    width:68px;
+    text-align:center;
+  }
+
+  .panel-premios small{
+    color:rgba(226,232,240,.6);
+  }
+
+  @media(max-width:768px){
+    .page-head{ flex-wrap:wrap; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <a href="{% url 'adminx_rifas' %}" class="btn-back">
+    <i class="fa-solid fa-arrow-left"></i>
+    Voltar
+  </a>
+  <div class="page-head-title">Rifa: {{ rifa.titulo }}</div>
+
+  <!-- botão configurar (amarelo) -->
+  <a href="{% url 'adminx_rifa_config' rifa.id %}" class="btn-action btn-admin-config ms-auto">
+    <i class="fa-solid fa-sliders"></i> Configuração
+  </a>
+
+  <!-- botão financeiro (azul) -->
+  <a href="{% url 'adminx_rifa_financeiro' rifa.id %}" class="btn-action btn-admin-financeiro ms-2">
+    <i class="fa-solid fa-coins"></i> Financeiro
+  </a>
+
+  <!-- botão sorteador (verde) -->
+  {% if total_numeros and pagos and total_numeros == pagos %}
+    <a href="{% url 'adminx_rifa_sorteador' rifa.id %}"
+       class="btn-action btn-admin-sorteador ms-2"
+       title="Abrir sorteador">
+      <i class="fa-solid fa-shuffle"></i> Sorteador
+    </a>
+  {% else %}
+    <a href="javascript:void(0);"
+       class="btn-action btn-admin-sorteador ms-2 disabled"
+       title="Sorteio bloqueado: ainda não estão todos os números pagos.">
+      <i class="fa-solid fa-shuffle"></i> Sorteador
+    </a>
+  {% endif %}
+
+  <span class="chip ms-2">
+    {% if rifa.ativo %}
+      <i class="fa-regular fa-circle-check text-success"></i> Ativa
+    {% else %}
+      <i class="fa-regular fa-circle-xmark text-danger"></i> Inativa
+    {% endif %}
+  </span>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-md-3">
+    <div class="kpi">
+      <div class="h">Números pagos</div>
+      <div class="v">{{ pagos }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi">
+      <div class="h">Reservados</div>
+      <div class="v">{{ reservados }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi">
+      <div class="h">Livres</div>
+      <div class="v">{{ livres }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi">
+      <div class="h">Vendas (R$)</div>
+      <div class="v">R$ {{ vendas_total }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel mt-3">
+  <div class="panel-h">
+    <div class="h6 mb-0"><i class="fa-solid fa-chart-simple me-2"></i>Progresso da rifa</div>
+  </div>
+  <div class="panel-c">
+    {% with total=total_numeros p=pagos r=reservados %}
+      {% with sold=p|add:r %}
+        {% if total > 0 %}
+          <div class="mb-2 text-secondary">
+            Vendidos/Reservados: <strong>{{ sold }}</strong> de {{ total }} —
+            Pagos: <strong>{{ p }}</strong>; Reservados: <strong>{{ r }}</strong>
+          </div>
+          <div class="progress progress-rifa">
+            <div class="progress-bar bg-success" style="width:{% widthratio p total 100 %}%"></div>
+            <div class="progress-bar bg-warning" style="width:{% widthratio r total 100 %}%"></div>
+          </div>
+        {% else %}
+          <div class="text-secondary">Defina a quantidade de números na página de configuração.</div>
+        {% endif %}
+      {% endwith %}
+    {% endwith %}
+  </div>
+</div>
+
+{# LINHA: último pagamento + último número + ganhadores cota #}
+<div class="row g-3 mt-1" id="row-info-extras">
+  <div class="col-12 col-lg-4">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="h6 mb-0">
+          <i class="fa-solid fa-circle-check me-2 text-success"></i>Último pagamento aprovado
+        </div>
+      </div>
+      <div class="panel-c" id="ultimo-pagamento-box">
+        <div class="text-secondary small">Ainda não há pagamentos aprovados.</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="h6 mb-0">
+          <i class="fa-solid fa-hashtag me-2 text-warning"></i>Último número comprado
+        </div>
+      </div>
+      <div class="panel-c" id="ultimo-numero-box">
+        <div class="text-secondary small">Nenhum número vendido ainda.</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="panel panel-premios">
+      <div class="panel-h">
+        <div class="h6 mb-0">
+          <i class="fa-solid fa-gift me-2 text-info"></i>Ganhadores das Cotas Premiadas
+        </div>
+      </div>
+      <div class="panel-c" id="cotas-premiadas-box">
+        <div class="text-secondary small">Nenhum ganhador ainda.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <!-- Buscar número -->
+  <div class="col-12 col-lg-6">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="h6 mb-0"><i class="fa-solid fa-magnifying-glass me-2"></i>Buscar número (ganhador / dono)</div>
+      </div>
+      <div class="panel-c">
+        <form method="get" class="row g-2">
+          <div class="col-8 col-md-6">
+            <input type="number"
+                   min="1"
+                   class="form-control filter-input"
+                   name="n"
+                   value="{{ qnum }}"
+                   placeholder="Digite o número"/>
+          </div>
+          <div class="col-4 col-md-3">
+            <button class="btn-action btn-admin-config w-100">
+              <i class="fa-solid fa-search me-1"></i>Buscar
+            </button>
+          </div>
+        </form>
+
+        {% if qnum %}
+          <hr class="border-secondary">
+          {% if numero_info %}
+            <div>
+              <div class="mb-1">Número: <strong>#{{ numero_info.numero }}</strong></div>
+              <div class="mb-1">Status:
+                {% if numero_info.status == "pago" %}
+                  <span class="badge bg-success bg-opacity-90 badge-status">pago</span>
+                {% elif numero_info.status == "reservado" %}
+                  <span class="badge bg-warning bg-opacity-90 badge-status">reservado</span>
+                {% else %}
+                  <span class="badge bg-secondary bg-opacity-50 badge-status">livre</span>
+                {% endif %}
+              </div>
+              {% if numero_info.cliente %}
+                <div class="mb-1">Cliente: <strong>{{ numero_info.cliente }}</strong> — CPF {{ numero_info.cpf }}</div>
+                <div class="mb-2 d-flex flex-wrap gap-2">
+                  <a class="btn-wpp-xs"
+                     target="_blank"
+                     href="https://wa.me/55{{ numero_info.telefone|default_if_none:''|digits }}?text={{ 'Olá ' |add:numero_info.cliente|urlencode }}%2C%20seu%20número%20%23{{ numero_info.numero }}%20na%20rifa%20{{ rifa.titulo|urlencode }}%20está%20{{ numero_info.status|urlencode }}.">
+                    <i class="fa-brands fa-whatsapp"></i>
+                  </a>
+                  {% if numero_info.pedido_id %}
+                    <a class="btn-action btn-admin-financeiro" href="{% url 'adminx_pedido_detail' numero_info.pedido_id %}">
+                      <i class="fa-solid fa-up-right-from-square me-1"></i>Abrir pedido {{ numero_info.protocolo }}
+                    </a>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="text-secondary">Não encontrado na rifa.</div>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top compradores -->
+  <div class="col-12 col-lg-6">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="h6 mb-0"><i class="fa-solid fa-ranking-star me-2"></i>Top compradores</div>
+      </div>
+      <div class="panel-c">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 table-darkish">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>CPF</th>
+                <th>Tel</th>
+                <th class="text-end">Números</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in top_compradores %}
+              <tr>
+                <td>{{ c.cliente__nome }}</td>
+                <td>{{ c.cliente__cpf }}</td>
+                <td>{{ c.cliente__telefone }}</td>
+                <td class="text-end">{{ c.qtd }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-secondary">Sem dados.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Últimos pedidos da rifa (dinâmico) -->
+<div class="panel mt-3" id="panel-pedidos-rifa" data-rifa-id="{{ rifa.id }}">
+  <div class="panel-h">
+    <div class="h6 mb-0"><i class="fa-solid fa-receipt me-2"></i>Últimos pedidos desta rifa</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0 table-darkish" id="tabela-pedidos-rifa">
+        <thead>
+          <tr>
+            <th>Protocolo</th>
+            <th>Cliente</th>
+            <th class="text-center col-actions-wpp">Wpp</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Criado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody-pedidos-rifa">
+          {% for p in ultimos_pedidos %}
+            {% if p.status != "cancelado" and p.status != "expirado" %}
+            <tr data-pedido-id="{{ p.id }}">
+              <td class="fw-semibold">{{ p.protocolo }}</td>
+              <td>{{ p.cliente.nome }}</td>
+              <td class="text-center col-actions-wpp">
+                {% if p.cliente.telefone %}
+                  <a class="btn-wpp-xs"
+                     target="_blank"
+                     href="https://wa.me/55{{ p.cliente.telefone|default_if_none:''|digits }}?text={{ 'Olá ' |add:p.cliente.nome|urlencode }}%2C%20sobre%20seu%20pedido%20{{ p.protocolo }}%20na%20rifa%20{{ rifa.titulo|urlencode }}...">
+                    <i class="fa-brands fa-whatsapp"></i>
+                  </a>
+                {% else %}
+                  <span class="text-secondary" style="font-size:.6rem;">—</span>
+                {% endif %}
+              </td>
+              <td>R$ {{ p.total }}</td>
+              <td>
+                {% if p.status == "pago" %}
+                  <span class="badge bg-success bg-opacity-90 badge-status">pago</span>
+                {% elif p.status == "pendente" or p.status == "reservado" %}
+                  <span class="badge bg-warning bg-opacity-90 badge-status">reservado</span>
+                {% else %}
+                  <span class="badge bg-danger bg-opacity-80 badge-status">{{ p.status }}</span>
+                {% endif %}
+              </td>
+              <td>{{ p.criado_em|date:"d/m H:i" }}</td>
+              <td>
+                <a href="{% url 'adminx_pedido_detail' p.id %}" class="btn-action btn-admin-config">
+                  <i class="fa-solid fa-eye me-1"></i>Ver
+                </a>
+              </td>
+            </tr>
+            {% endif %}
+          {% empty %}
+          <tr><td colspan="7" class="text-secondary">Sem pedidos para esta rifa.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function(){
+  const panel = document.getElementById('panel-pedidos-rifa');
+  if (!panel) return;
+
+  const rifaId = panel.dataset.rifaId;
+  const url = "{% url 'adminx_rifa_pedidos_json' 0 %}".replace("0", rifaId);
+
+  const tbody = document.getElementById('tbody-pedidos-rifa');
+  const boxUltimoPagamento = document.getElementById('ultimo-pagamento-box');
+  const boxUltimoNumero = document.getElementById('ultimo-numero-box');
+  const boxCotasPremiadas = document.getElementById('cotas-premiadas-box');
+
+  function renderUltimoPagamento(data){
+    if (!boxUltimoPagamento) return;
+    if (!data){
+      boxUltimoPagamento.innerHTML = '<div class="text-secondary small">Ainda não há pagamentos aprovados.</div>';
+      return;
+    }
+    const tel = data.cliente_telefone ? `
+      <a class="btn-wpp-xs ms-2" target="_blank"
+         href="https://wa.me/55${data.cliente_telefone}?text=${encodeURIComponent('Olá '+data.cliente_nome+', pagamento confirmado da rifa {{ rifa.titulo }}!')}">
+        <i class="fa-brands fa-whatsapp"></i>
+      </a>
+    ` : '';
+    boxUltimoPagamento.innerHTML = `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div>
+          <div class="fw-semibold">${data.cliente_nome}</div>
+          <div class="text-secondary small">Protocolo: ${data.protocolo}</div>
+          <div class="text-secondary small">Pago em: ${data.pago_em || '-'}</div>
+        </div>
+        <div class="ms-auto text-end">
+          <div class="fw-bold">R$ ${data.total}</div>
+          ${tel}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderUltimoNumero(data){
+    if (!boxUltimoNumero) return;
+    if (!data){
+      boxUltimoNumero.innerHTML = '<div class="text-secondary small">Nenhum número vendido ainda.</div>';
+      return;
+    }
+
+    const numero = data.ultimo_numero_restante || data.ultimo_numero_vendido || data.numero;
+    const nome = data.cliente_nome || '—';
+    const tel = data.cliente_telefone;
+    const status = data.status || 'pago';
+
+    const telBtn = tel ? `
+      <a class="btn-wpp-xs ms-2" target="_blank"
+         href="https://wa.me/55${tel}?text=${encodeURIComponent('Olá '+nome+', você ficou com o último número #'+numero+' da rifa {{ rifa.titulo }}!')}">
+        <i class="fa-brands fa-whatsapp"></i>
+      </a>` : '';
+
+    const badge =
+      status === "pago" ? '<span class="badge bg-success bg-opacity-90 badge-status ms-2">pago</span>' :
+      status === "reservado" ? '<span class="badge bg-warning bg-opacity-90 badge-status ms-2">reservado</span>' :
+      '<span class="badge bg-secondary bg-opacity-50 badge-status ms-2">'+ status +'</span>';
+
+    boxUltimoNumero.innerHTML = `
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div>
+          <div class="fw-semibold">#${numero} ${badge}</div>
+          <div class="text-secondary small">${nome}</div>
+        </div>
+        <div class="ms-auto">${telBtn}</div>
+      </div>
+    `;
+  }
+
+  function renderCotasPremiadas(list){
+    if (!boxCotasPremiadas) return;
+    if (!list || !list.length){
+      boxCotasPremiadas.innerHTML = '<div class="text-secondary small">Nenhum ganhador ainda.</div>';
+      return;
+    }
+    let html = '<div class="small">';
+    list.forEach(item => {
+      const numero = item.numero || item.cota || '—';
+      const cliente = item.cliente_nome || '—';
+      const valor = item.valor_premio || item.valor || '0,00';
+      html += `
+        <div class="mb-1">
+          <strong>#${numero}</strong> — ${cliente}<br>
+          <small>Prêmio: R$ ${valor}</small>
+        </div>
+      `;
+    });
+    html += '</div>';
+    boxCotasPremiadas.innerHTML = html;
+  }
+
+  function buildRow(p){
+    if (p.status === "cancelado" || p.status === "expirado") return "";
+
+    const wppBtn = p.cliente_telefone
+      ? `<a class="btn-wpp-xs" target="_blank"
+             href="https://wa.me/55${p.cliente_telefone}?text=${encodeURIComponent('Olá '+p.cliente_nome+', sobre seu pedido '+p.protocolo+' na rifa {{ rifa.titulo }}...')}">
+           <i class="fa-brands fa-whatsapp"></i>
+         </a>`
+      : `<span class="text-secondary" style="font-size:.6rem;">—</span>`;
+
+    let badge = '';
+    if (p.status === "pago"){
+      badge = '<span class="badge bg-success bg-opacity-90 badge-status">pago</span>';
+    } else if (p.status === "pendente" || p.status === "reservado") {
+      badge = '<span class="badge bg-warning bg-opacity-90 badge-status">reservado</span>';
+    } else {
+      badge = `<span class="badge bg-danger bg-opacity-80 badge-status">${p.status}</span>`;
+    }
+
+    return `
+      <tr data-pedido-id="${p.id}">
+        <td class="fw-semibold">${p.protocolo}</td>
+        <td>${p.cliente_nome}</td>
+        <td class="text-center col-actions-wpp">
+          ${wppBtn}
+        </td>
+        <td>R$ ${p.total}</td>
+        <td>${badge}</td>
+        <td>${p.criado}</td>
+        <td>
+          <a href="${p.url_detail}" class="btn-action btn-admin-config">
+            <i class="fa-solid fa-eye me-1"></i>Ver
+          </a>
+        </td>
+      </tr>
+    `;
+  }
+
+  function updatePedidos(list){
+    if (!tbody) return;
+
+    const novosIds = new Set();
+    list.forEach(p => {
+      if (p.status === "cancelado" || p.status === "expirado"){
+        const tr = tbody.querySelector(`tr[data-pedido-id="${p.id}"]`);
+        if (tr) tr.remove();
+        return;
+      }
+
+      novosIds.add(String(p.id));
+      const trExist = tbody.querySelector(`tr[data-pedido-id="${p.id}"]`);
+      const html = buildRow(p);
+      if (!html) return;
+
+      if (trExist){
+        trExist.outerHTML = html;
+      } else {
+        tbody.insertAdjacentHTML('afterbegin', html);
+      }
+    });
+
+    Array.from(tbody.querySelectorAll('tr[data-pedido-id]')).forEach(tr => {
+      const id = tr.dataset.pedidoId;
+      if (!novosIds.has(id)){
+        tr.remove();
+      }
+    });
+
+    if (!tbody.querySelector('tr[data-pedido-id]')){
+      tbody.innerHTML = `<tr><td colspan="7" class="text-secondary">Sem pedidos para esta rifa.</td></tr>`;
+    }
+  }
+
+  function carregar(){
+    fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}})
+      .then(r => r.json())
+      .then(data => {
+        if (data && Array.isArray(data.pedidos)){
+          updatePedidos(data.pedidos);
+        }
+        renderUltimoPagamento(data.ultimo_pagamento || null);
+        renderUltimoNumero(data.ultimo_numero || data.ultimo_numero_restante || data.ultimo_numero_vendido || null);
+        renderCotasPremiadas(
+          data.cotas_premiadas_ganhas ||
+          data.cotas_premiadas ||
+          data.premios_instantaneos ||
+          []
+        );
+      })
+      .catch(() => {});
+  }
+
+  carregar();
+  setInterval(carregar, 7000);
+})();
+</script>
+{% endblock %}
+  

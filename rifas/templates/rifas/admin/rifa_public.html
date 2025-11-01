@@ -1,0 +1,765 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>{{ rifa.titulo }} • Rifa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --ink:#0f172a;
+      --muted:#64748b;
+      --soft:#e2e8f0;
+      --bg:#f4f5f7;
+      --accent:#ca8a04;
+      --paid:#16a34a;
+      --reserved:#f97316;
+      --free:#e2e8f0;
+      --mine:#0ea5e9;
+    }
+    body{
+      background:var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
+    }
+    .page-wrap{
+      max-width: 1200px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 1.1fr 0.45fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 991px){
+      .page-wrap{
+        grid-template-columns: 1fr;
+      }
+      .side-cart{position: static !important;}
+    }
+    .hero{
+      background: white;
+      border-radius: 1rem;
+      border:1px solid #e2e8f0;
+      display:flex;
+      gap:1rem;
+      padding:1rem;
+      margin-bottom:1rem;
+      align-items: center;
+    }
+    .hero-img{
+      width: 120px;
+      height: 120px;
+      border-radius:.75rem;
+      background:#0f172a10;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow: hidden;
+    }
+    .hero-img img{
+      width:100%; height:100%; object-fit:cover;
+    }
+    .badge-soft{
+      background:#fef3c7;
+      color:#92400e;
+      padding:.15rem .55rem;
+      border-radius:999px;
+      font-size:.70rem;
+      font-weight:600;
+    }
+    .numbers-panel{
+      background:white;
+      border-radius:1rem;
+      border:1px solid #e2e8f0;
+      padding: .75rem .75rem 1rem;
+    }
+    .numbers-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+      gap: .5rem;
+    }
+    .num-tile{
+      border-radius:.5rem;
+      text-align:center;
+      font-weight:600;
+      padding:.35rem 0 .25rem;
+      cursor:pointer;
+      border:1px solid transparent;
+      font-size:.85rem;
+      min-height:46px;
+      display:flex;
+      flex-direction: column;
+      justify-content:center;
+      gap:2px;
+      background:white;
+      border-color:#e2e8f0;
+      color:var(--ink);
+      transition:transform .08s ease-out;
+    }
+    .num-tile:hover{transform:translateY(-1px);}
+    .num-paid{
+      background: rgba(22,163,74,.12);
+      border-color: rgba(22,163,74,.45);
+      color:#166534;
+      cursor:not-allowed;
+    }
+    .num-reserved{
+      background: rgba(249,115,22,.12);
+      border-color: rgba(249,115,22,.45);
+      color:#c05621;
+      cursor:not-allowed;
+    }
+    .num-mine{
+      background: rgba(14,165,233,.12);
+      border-color: rgba(14,165,233,.55);
+      color:#0f172a;
+    }
+    .legend-dot{
+      width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:.35rem;
+    }
+    .side-cart{
+      background:white;
+      border:1px solid #e2e8f0;
+      border-radius: 1rem;
+      padding:1rem;
+      position: sticky;
+      top:1rem;
+    }
+    .cart-list{
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .rank-card{
+      background:white;
+      border:1px solid #e2e8f0;
+      border-radius:1rem;
+      margin-top:1.25rem;
+      padding:1rem;
+    }
+    /* bloco top compradores */
+    .top-block{
+      background:white;
+      border:1px solid #e2e8f0;
+      border-radius:1rem;
+      margin-bottom:1rem;
+      padding:1rem;
+      display:flex;
+      gap:1rem;
+      align-items:flex-start;
+    }
+    .top-block .thumb{
+      width:110px;
+      min-width:110px;
+      height:110px;
+      border-radius:.75rem;
+      overflow:hidden;
+      background:#0f172a10;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .top-block .thumb img{
+      width:100%; height:100%; object-fit:cover;
+    }
+    .top-list li{
+      display:flex;
+      justify-content:space-between;
+      gap:.75rem;
+      margin-bottom:.5rem;
+      border-bottom:1px dashed #e2e8f0;
+      padding-bottom:.35rem;
+    }
+    .top-list small{color:var(--muted);}
+    /* barras status */
+    .status-row{
+      display:flex;
+      gap:.5rem;
+      margin-bottom:.6rem;
+    }
+    .status-pill{
+      flex:1 1 0;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:.65rem;
+      padding:.35rem .55rem .3rem;
+      cursor:pointer;
+      transition:.1s;
+    }
+    .status-pill small{display:block; color:var(--muted); font-size:.62rem;}
+    .status-pill strong{display:block;font-size:.9rem;}
+    .status-pill.active{
+      border-color:#0ea5e9;
+      background:#e0f2fe;
+      box-shadow:0 4px 12px rgba(14,165,233,.15);
+    }
+    .sales-bar-wrap{
+      background:#e2e8f0;
+      border-radius:999px;
+      height:15px;
+      overflow:hidden;
+      display:flex;
+    }
+    .sales-paid{
+      background:rgba(22,163,74,.85);
+      height:100%;
+      transition:width .35s ease-out;
+    }
+    .sales-res{
+      background:rgba(249,115,22,.85);
+      height:100%;
+      transition:width .35s ease-out;
+    }
+    .sales-free{flex:1;}
+    .sales-label{
+      font-size:.7rem;
+      color:var(--muted);
+      text-align:right;
+      margin-top:.25rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- COLUNA ESQUERDA -->
+  <div>
+    <!-- hero / topo -->
+    <div class="hero">
+      <div class="hero-img">
+        {% if rifa.banner %}
+          <img src="{{ rifa.banner.url }}" alt="{{ rifa.titulo }}">
+        {% elif rifa.imagem %}
+          <img src="{{ rifa.imagem.url }}" alt="{{ rifa.titulo }}">
+        {% else %}
+          <i class="fa-solid fa-ticket fa-3x text-secondary"></i>
+        {% endif %}
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge-soft">{{ rifa.slug }}</span>
+          {% if rifa.inicio_vendas and rifa.fim_vendas and rifa.inicio_vendas <= now and rifa.fim_vendas >= now %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Em vendas</span>
+          {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Fora do período</span>
+          {% endif %}
+        </div>
+        <h1 class="h5 mb-1">{{ rifa.titulo }}</h1>
+        <div class="text-secondary small">
+          Nº pagos: {{ pagos }} • Reservados: {{ reservados }} • Livres: {{ livres }} • Total: {{ total_numeros }}
+        </div>
+        {% if rifa.inicio_vendas and rifa.fim_vendas %}
+        <div class="text-secondary small">
+          Venda: {{ rifa.inicio_vendas|date:"d/m/Y H:i" }} — {{ rifa.fim_vendas|date:"d/m/Y H:i" }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="text-end d-none d-md-block">
+        <div class="text-secondary small mb-1">Valor do número</div>
+        <div class="h4 mb-0">R$ {{ rifa.preco_numero }}</div>
+      </div>
+    </div>
+
+    {% if rifa.mostrar_top_compradores %}
+    <div class="top-block" id="top-block">
+      <div class="thumb">
+        {% if rifa.banner %}
+          <img src="{{ rifa.banner.url }}" alt="{{ rifa.titulo }}">
+        {% elif rifa.imagem %}
+          <img src="{{ rifa.imagem.url }}" alt="{{ rifa.titulo }}">
+        {% else %}
+          <i class="fa-solid fa-user-group fa-2x text-secondary"></i>
+        {% endif %}
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-semibold"><i class="fa-solid fa-crown text-warning me-1"></i>Top compradores</div>
+          <small class="text-secondary" id="top-updated">--</small>
+        </div>
+        <ol class="mb-0 ps-3 small top-list" id="top-body">
+          <li class="text-secondary">Carregando...</li>
+        </ol>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- painel de números -->
+    <div class="numbers-panel">
+      <!-- filtros + barra -->
+      <div class="status-row mb-2">
+        <div class="status-pill active" data-filter="all">
+          <small>Todos</small>
+          <strong id="cnt-all">0</strong>
+        </div>
+        <div class="status-pill" data-filter="livre">
+          <small>Livres</small>
+          <strong id="cnt-livre">0</strong>
+        </div>
+        <div class="status-pill" data-filter="reservado">
+          <small>Reservados</small>
+          <strong id="cnt-res">0</strong>
+        </div>
+        <div class="status-pill" data-filter="pago">
+          <small>Pagos</small>
+          <strong id="cnt-pay">0</strong>
+        </div>
+      </div>
+      <div class="sales-bar-wrap mb-3">
+        <div class="sales-paid" id="bar-paid" style="width:0%"></div>
+        <div class="sales-res" id="bar-res" style="width:0%"></div>
+        <div class="sales-free"></div>
+      </div>
+      <div class="sales-label" id="sales-label">0% vendidos / 0% reservados</div>
+
+      <div class="d-flex align-items-center justify-content-between mb-2 mt-3">
+        <div class="fw-semibold"><i class="fa-solid fa-hashtag me-1"></i>Escolha seus números</div>
+        <div class="d-flex gap-3 small text-secondary">
+          <span><span class="legend-dot" style="background:white;border:1px solid #e2e8f0"></span> Livre</span>
+          <span><span class="legend-dot" style="background:rgba(249,115,22,.65)"></span> Reservado</span>
+          <span><span class="legend-dot" style="background:rgba(22,163,74,.8)"></span> Pago</span>
+          <span><span class="legend-dot" style="background:rgba(14,165,233,.8)"></span> Seu</span>
+        </div>
+      </div>
+
+      <div id="numbers-grid" class="numbers-grid" data-slug="{{ rifa.slug }}">
+        <!-- JS monta -->
+      </div>
+    </div>
+
+    <!-- ranking separado (se quiser manter) -->
+    <div class="rank-card d-none" id="ranking-card">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="fw-semibold"><i class="fa-solid fa-ranking-star me-1 text-warning"></i>Ranking de compras</div>
+        <small class="text-secondary" id="ranking-updated">--</small>
+      </div>
+      <div id="ranking-body" class="small text-secondary">Carregando...</div>
+    </div>
+  </div>
+
+  <!-- COLUNA DIREITA -->
+  <div>
+    <div class="side-cart">
+      <div class="d-flex align-items-center mb-2">
+        <i class="fa-solid fa-cart-shopping me-2 text-warning"></i>
+        <h2 class="h6 mb-0">Seu pedido</h2>
+      </div>
+      <p class="small text-secondary mb-2">
+        Escolha os números no painel ao lado. Eles ficarão reservados por alguns minutos enquanto você finaliza.
+      </p>
+
+      <form id="checkout-form" class="mb-3">
+        <div class="mb-2">
+          <label class="form-label small">Nome completo</label>
+          <input type="text" name="nome" id="cli-nome" class="form-control form-control-sm" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">CPF</label>
+          <input type="text" name="cpf" id="cli-cpf" class="form-control form-control-sm" placeholder="000.000.000-00" required maxlength="14" inputmode="numeric">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">WhatsApp</label>
+          <input type="text" name="telefone" id="cli-tel" class="form-control form-control-sm" placeholder="(63) 9 0000-0000" required maxlength="16" inputmode="numeric">
+        </div>
+      </form>
+
+      <hr>
+
+      <div class="mb-2 d-flex align-items-center justify-content-between">
+        <span class="small text-secondary">Números selecionados</span>
+        <button class="btn btn-sm btn-link text-danger p-0" id="btn-clear" type="button">limpar</button>
+      </div>
+      <div class="cart-list mb-2" id="selected-list">
+        <div class="text-secondary small">Nenhum número ainda.</div>
+      </div>
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <span class="small text-secondary">Total</span>
+        <span class="h5 mb-0" id="total-price">R$ 0,00</span>
+      </div>
+      <button class="btn btn-warning w-100" id="btn-checkout" type="button">
+        <i class="fa-solid fa-bolt me-1"></i>Finalizar pedido
+      </button>
+      <div class="small text-secondary mt-2" id="checkout-msg"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal de número indisponível -->
+<div class="modal fade" id="numeroModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-dark text-white py-2">
+        <h5 class="modal-title"><i class="fa-solid fa-hashtag me-1"></i>Número</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="numeroModalBody"></div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  const slug = document.getElementById('numbers-grid').dataset.slug;
+  const grid = document.getElementById('numbers-grid');
+  const price = parseFloat("{{ rifa.preco_numero }}".replace(",", ".")) || 0;
+  const selected = new Set();
+  const selectedList = document.getElementById('selected-list');
+  const totalPriceEl = document.getElementById('total-price');
+  const checkoutMsg = document.getElementById('checkout-msg');
+  const numeroModal = new bootstrap.Modal(document.getElementById('numeroModal'));
+  const total = {{ total_numeros|default:0 }};
+  const filterPills = document.querySelectorAll('.status-pill');
+  const barPaid = document.getElementById('bar-paid');
+  const barRes = document.getElementById('bar-res');
+  const salesLabel = document.getElementById('sales-label');
+  const hasTop = {{ rifa.mostrar_top_compradores|yesno:"true,false" }};
+
+  // estado do filtro atual
+  let currentFilter = 'all';
+
+  // monta grade inicial
+  for(let i=1; i<=total; i++){
+    const div = document.createElement('div');
+    div.className = 'num-tile';
+    div.textContent = i;
+    div.dataset.num = i;
+    div.dataset.status = 'livre'; // default
+    grid.appendChild(div);
+  }
+
+  function toTitleCase(str){
+    if(!str) return "";
+    const lowers = ["de","da","do","das","dos","e"];
+    return str
+      .toLowerCase()
+      .split(" ")
+      .filter(Boolean)
+      .map((w,i)=> (i>0 && lowers.includes(w)) ? w : w.charAt(0).toUpperCase()+w.slice(1))
+      .join(" ");
+  }
+  function maskCPF(v){
+    return v.replace(/\D/g,"")
+      .replace(/(\d{3})(\d)/,"$1.$2")
+      .replace(/(\d{3})(\d)/,"$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/,"$1-$2")
+      .slice(0,14);
+  }
+  function maskPhone(v){
+    v = v.replace(/\D/g,"");
+    if(v.length <= 10){
+      v = v.replace(/(\d{2})(\d)/, "($1) $2");
+      v = v.replace(/(\d{4})(\d)/, "$1-$2");
+    }else{
+      v = v.replace(/(\d{2})(\d)/, "($1) $2");
+      v = v.replace(/(\d{1})(\d{4})(\d)/, "$1 $2-$3");
+    }
+    return v;
+  }
+
+  document.getElementById('cli-cpf').addEventListener('input', e=>{
+    e.target.value = maskCPF(e.target.value);
+  });
+  document.getElementById('cli-tel').addEventListener('input', e=>{
+    e.target.value = maskPhone(e.target.value);
+  });
+  document.getElementById('cli-nome').addEventListener('blur', e=>{
+    e.target.value = toTitleCase(e.target.value);
+  });
+
+  function renderSelected(){
+    if(selected.size === 0){
+      selectedList.innerHTML = '<div class="text-secondary small">Nenhum número ainda.</div>';
+    }else{
+      selectedList.innerHTML = '';
+      Array.from(selected).sort((a,b)=>a-b).forEach(n=>{
+        const div = document.createElement('div');
+        div.className = 'd-flex align-items-center justify-content-between mb-1 small';
+        div.innerHTML = '<span>#'+n+'</span><button type="button" data-num="'+n+'" class="btn btn-sm btn-link text-danger p-0">remover</button>';
+        selectedList.appendChild(div);
+      });
+    }
+    const totalSel = selected.size * price;
+    totalPriceEl.textContent = 'R$ ' + totalSel.toFixed(2).replace('.', ',');
+  }
+
+  selectedList.addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-num]');
+    if(!btn) return;
+    const num = parseInt(btn.dataset.num,10);
+    selected.delete(num);
+    const tile = grid.querySelector('[data-num="'+num+'"]');
+    if(tile && !tile.dataset.statusFixed){
+      tile.className = 'num-tile';
+      tile.dataset.status = 'livre';
+      applyCurrentFilter(tile);
+    }
+    renderSelected();
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', e=>{
+    selected.clear();
+    grid.querySelectorAll('.num-tile').forEach(tile=>{
+      if(!tile.dataset.statusFixed){
+        tile.className = 'num-tile';
+        tile.dataset.status = tile.dataset.status || 'livre';
+      }
+      applyCurrentFilter(tile);
+    });
+    renderSelected();
+  });
+
+  // clique número
+  grid.addEventListener('click', e=>{
+    const tile = e.target.closest('.num-tile');
+    if(!tile) return;
+    const n = parseInt(tile.dataset.num, 10);
+    if(tile.classList.contains('num-paid') || tile.classList.contains('num-reserved')){
+      document.getElementById('numeroModalBody').innerHTML = `
+        <div class="text-center">
+          <div class="display-6 mb-2">#${n}</div>
+          <p class="text-secondary mb-0">Este número já está em uso.</p>
+        </div>`;
+      numeroModal.show();
+      return;
+    }
+    // seleciona
+    if(selected.has(n)){
+      selected.delete(n);
+      tile.className = 'num-tile';
+      tile.dataset.status = 'livre';
+    }else{
+      selected.add(n);
+      tile.className = 'num-tile num-mine';
+      tile.dataset.status = 'mine';
+    }
+    renderSelected();
+  });
+
+  // aplica filtro atual em 1 tile
+  function applyCurrentFilter(tile){
+    const st = tile.dataset.status || 'livre';
+    if(currentFilter === 'all'){
+      tile.style.display = '';
+      return;
+    }
+    if(currentFilter === 'livre'){
+      tile.style.display = (st === 'livre' || st === 'mine') ? '' : 'none';
+      return;
+    }
+    if(currentFilter === 'reservado'){
+      tile.style.display = (st === 'reservado') ? '' : 'none';
+      return;
+    }
+    if(currentFilter === 'pago'){
+      tile.style.display = (st === 'pago') ? '' : 'none';
+      return;
+    }
+  }
+
+  // aplica filtro em todos
+  function applyFilterToAll(){
+    grid.querySelectorAll('.num-tile').forEach(tile=>{
+      applyCurrentFilter(tile);
+    });
+  }
+
+  // clique nos filtros
+  filterPills.forEach(p=>{
+    p.addEventListener('click', ()=>{
+      filterPills.forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      currentFilter = p.dataset.filter;
+      applyFilterToAll();
+    });
+  });
+
+  // pega grade do backend
+  async function fetchGrade(){
+    try{
+      const resp = await fetch(`/api/rifas/${slug}/grade/`);
+      if(!resp.ok) return;
+      const data = await resp.json();
+      if(!data.numeros) return;
+
+      let free=0, res=0, pay=0;
+
+      data.numeros.forEach(obj=>{
+        const tile = grid.querySelector('[data-num="'+obj.numero+'"]');
+        if(!tile) return;
+
+        // se eu mesmo selecionei, mas backend tomou, tira
+        if(selected.has(obj.numero)){
+          if(obj.status === 'pago' || obj.status === 'reservado'){
+            selected.delete(obj.numero);
+            tile.dataset.statusFixed = "1";
+          }
+        }
+
+        if(obj.status === 'pago'){
+          tile.className = 'num-tile num-paid';
+          tile.dataset.status = 'pago';
+          tile.dataset.statusFixed = "1";
+          pay++;
+        }else if(obj.status === 'reservado'){
+          tile.className = 'num-tile num-reserved';
+          tile.dataset.status = 'reservado';
+          tile.dataset.statusFixed = "1";
+          res++;
+        }else{
+          // livre
+          // se antes era mine e não foi tomado, mantém mine
+          if(tile.classList.contains('num-mine') && !tile.dataset.statusFixed){
+            tile.dataset.status = 'mine';
+          }else{
+            tile.className = 'num-tile';
+            tile.dataset.status = 'livre';
+          }
+          tile.dataset.statusFixed = "";
+          free++;
+        }
+
+        // re-aplica o filtro só nesse tile
+        applyCurrentFilter(tile);
+      });
+
+      // contadores
+      document.getElementById('cnt-livre').textContent = free;
+      document.getElementById('cnt-res').textContent   = res;
+      document.getElementById('cnt-pay').textContent   = pay;
+      document.getElementById('cnt-all').textContent   = (free+res+pay);
+
+      // barra de vendas animada
+      const tot = free+res+pay || 1;
+      const pctPay = (pay/tot)*100;
+      const pctRes = (res/tot)*100;
+      barPaid.style.width = pctPay.toFixed(2) + '%';
+      barRes.style.width  = pctRes.toFixed(2) + '%';
+      salesLabel.textContent = pctPay.toFixed(1) + '% vendidos / ' + pctRes.toFixed(1) + '% reservados';
+
+      renderSelected();
+    }catch(err){
+      console.warn('erro ao pegar grade', err);
+    }
+  }
+
+  // top compradores público
+  async function fetchTop(){
+    if(!hasTop) return;
+    const box = document.getElementById('top-body');
+    const up  = document.getElementById('top-updated');
+    try{
+      const resp = await fetch(`/api/rifas/${slug}/top/`);
+      if(!resp.ok){
+        box.innerHTML = '<li class="text-secondary">Sem dados ainda.</li>';
+        return;
+      }
+      const data = await resp.json();
+      const lista = Array.isArray(data) ? data : data.resultados;
+      if(!lista || lista.length === 0){
+        box.innerHTML = '<li class="text-secondary">Sem dados ainda.</li>';
+      }else{
+        box.innerHTML = '';
+        lista.slice(0,3).forEach((item, idx)=>{
+          const li = document.createElement('li');
+          const nome = item.nome || '---';
+          const qtd  = item.qtd || 0;
+          const total = item.total ? ('R$ '+parseFloat(item.total).toFixed(2).replace('.',',')) : '';
+          li.innerHTML = `<div><strong>#${idx+1}</strong> ${nome}</div><small>${qtd} nº • ${total}</small>`;
+          box.appendChild(li);
+        });
+      }
+      up.textContent = 'atualizado agora';
+    }catch(err){
+      box.innerHTML = '<li class="text-secondary">Não foi possível carregar.</li>';
+    }
+  }
+
+  // checkout
+  document.getElementById('btn-checkout').addEventListener('click', async e=>{
+    e.preventDefault();
+    checkoutMsg.textContent = '';
+    checkoutMsg.className = 'small text-secondary mt-2';
+
+    if(selected.size === 0){
+      checkoutMsg.textContent = 'Escolha pelo menos 1 número.';
+      checkoutMsg.className = 'small text-danger mt-2';
+      return;
+    }
+
+    const nomeEl = document.getElementById('cli-nome');
+    const cpfEl  = document.getElementById('cli-cpf');
+    const telEl  = document.getElementById('cli-tel');
+
+    const nome = toTitleCase(nomeEl.value.trim());
+    const cpf  = cpfEl.value.trim();
+    const tel  = telEl.value.trim();
+
+    if(!nome || !cpf || !tel){
+      checkoutMsg.textContent = 'Preencha todos os dados.';
+      checkoutMsg.className = 'small text-danger mt-2';
+      return;
+    }
+
+    const numeros = Array.from(selected);
+
+    try{
+      const resp = await fetch('/api/pedidos/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          slug: slug,
+          cpf: cpf,
+          nome: nome,
+          telefone: tel,
+          numeros: numeros
+        })
+      });
+      const data = await resp.json();
+      if(!resp.ok){
+        checkoutMsg.textContent = data.detail || 'Erro ao criar pedido.';
+        checkoutMsg.className = 'small text-danger mt-2';
+        fetchGrade();
+        return;
+      }
+      // sucesso
+      checkoutMsg.textContent = 'Pedido criado! Protocolo: '+data.protocolo;
+      checkoutMsg.className = 'small text-success mt-2';
+
+      if(data.payment_url){
+        window.location.href = data.payment_url;
+        return;
+      }
+      if(data.protocolo){
+        window.location.href = `/pedido/${data.protocolo}/`;
+        return;
+      }
+
+      selected.clear();
+      renderSelected();
+      fetchGrade();
+    }catch(err){
+      checkoutMsg.textContent = 'Erro de conexão.';
+      checkoutMsg.className = 'small text-danger mt-2';
+    }
+  });
+
+  // inicial
+  fetchGrade();
+  fetchTop();
+  // atualiza a cada 2s
+  setInterval(fetchGrade, 2000);
+  // top pode ser a cada 20s
+  if(hasTop) setInterval(fetchTop, 20000);
+})();
+</script>
+</body>
+</html>

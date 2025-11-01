@@ -1,0 +1,316 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Pedidos — Painel{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* filtros topo */
+  .filter-input{
+    background:rgba(15,23,42,.4);
+    border:1px solid rgba(148,163,184,.08);
+    color:#e2e8f0;
+  }
+  .filter-input:focus{
+    border-color:rgba(148,163,184,.4);
+    box-shadow:none;
+    background:rgba(15,23,42,.6);
+  }
+  .filter-select{
+    background:rgba(15,23,42,.4);
+    border:1px solid rgba(148,163,184,.08);
+    color:#e2e8f0;
+  }
+  .filter-select option{
+    background:#0f172a;
+    color:#e2e8f0;
+  }
+
+  /* tabela dark */
+  .table-darkish.table > :not(caption) > * > *{
+    background:transparent;
+    box-shadow:none;
+  }
+  .table-darkish thead th{
+    border-bottom:1px solid rgba(148,163,184,.14);
+    color:rgba(226,232,240,.6);
+    font-weight:500;
+  }
+  .table-darkish tbody td{
+    border-color:rgba(15,23,42,.35);
+  }
+
+  /* botões padrão do painel escuro */
+  .btn-outline-soft{
+    background:rgba(15,23,42,.15);
+    border:1px solid rgba(148,163,184,.1);
+    color:#e2e8f0;
+  }
+  .btn-outline-soft:hover{
+    background:rgba(148,163,184,.12);
+  }
+  .btn-icon{
+    width:31px;
+    height:31px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+
+  /* COLUNA FIXA PRO WHATSAPP */
+  .col-wpp{
+    width:68px;            /* largura fixa */
+    text-align:center;
+  }
+  .btn-wpp-xs{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(34,197,94,.4);
+    width:44px;
+    height:30px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:.55rem;
+    text-decoration:none;          /* tira sublinhado */
+  }
+  .btn-wpp-xs:hover{
+    background:rgba(34,197,94,.12);
+    text-decoration:none;          /* garante no hover */
+  }
+  .btn-wpp-xs i{
+    font-size:1.05rem;
+  }
+
+  /* se tiver anchor dentro da tabela, não sublinhar */
+  .table-darkish a{
+    text-decoration:none;
+  }
+  .table-darkish a:hover{
+    text-decoration:none;
+  }
+
+  /* chips do modal */
+  .num-chip{
+    background:rgba(15,23,42,.4);
+    border:1px solid rgba(148,163,184,.1);
+    border-radius:10px;
+    padding:4px 10px 4px;
+    display:inline-flex;
+    gap:4px;
+    align-items:center;
+    font-size:.75rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <div class="panel-h">
+    <div class="h6 mb-0"><i class="fa-solid fa-receipt me-2"></i>Pedidos</div>
+
+    <!-- filtros desktop -->
+    <form class="d-none d-lg-flex ms-auto" action="" method="get">
+      <input class="form-control form-control-sm filter-input me-2" name="q" value="{{ q|default:"" }}" placeholder="Protocolo / Cliente / CPF">
+      <select name="rifa" class="form-select form-select-sm filter-select me-2">
+        <option value="">Rifa (todas)</option>
+        {% for r in rifas %}
+          <option value="{{ r.id }}" {% if rifa_f|add:""|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>{{ r.titulo }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="form-select form-select-sm filter-select me-2">
+        <option value="">Status (todos)</option>
+        <option value="pendente"  {% if status_f == "pendente"  %}selected{% endif %}>pendente</option>
+        <option value="pago"      {% if status_f == "pago"      %}selected{% endif %}>pago</option>
+        <option value="cancelado" {% if status_f == "cancelado" %}selected{% endif %}>cancelado</option>
+        <option value="expirado"  {% if status_f == "expirado"  %}selected{% endif %}>expirado</option>
+      </select>
+      <button class="btn btn-sm btn-gold">
+        <i class="fa-solid fa-filter me-1"></i>Filtrar
+      </button>
+    </form>
+
+    <a class="btn btn-sm btn-outline-soft ms-2" href="{% url 'adminx_lookup_numero' %}">
+      <i class="fa-solid fa-magnifying-glass me-1"></i>Buscar por número
+    </a>
+  </div>
+
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle table-darkish">
+        <thead>
+          <tr>
+            <th>Protocolo</th>
+            <th>Rifa</th>
+            <th>Cliente</th>
+            <th class="col-wpp text-center">Whats</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Criado</th>
+            <th style="width:280px" class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          {% with fone=p.cliente.telefone|default:"" %}
+          {% with fone_clean=fone|cut:" "|cut:"-"|cut:"("|cut:")"|cut:"." %}
+          <tr data-pedido-id="{{ p.id }}">
+            <td class="fw-semibold">{{ p.protocolo }}</td>
+            <td>{{ p.rifa.titulo }}</td>
+            <td>{{ p.cliente.nome }}</td>
+
+            <!-- coluna FIXA do whatsapp -->
+            <td class="col-wpp text-center">
+              {% if fone_clean %}
+                <a class="btn-wpp-xs wa-btn"
+                   href="https://wa.me/{{ fone_clean }}"
+                   data-text="Olá {{ p.cliente.nome }}, seu pedido {{ p.protocolo }} da rifa '{{ p.rifa.titulo }}' está com status: {{ p.status }}.">
+                  <i class="fa-brands fa-whatsapp"></i>
+                </a>
+              {% else %}
+                <span class="text-secondary" style="font-size:.7rem;">—</span>
+              {% endif %}
+            </td>
+
+            <td>R$ {{ p.total }}</td>
+            <td>
+              {% if p.status == "pago" %}
+                <span class="badge bg-success bg-opacity-80 rounded-pill px-3 py-1">pago</span>
+              {% elif p.status == "pendente" %}
+                <span class="badge bg-warning bg-opacity-85 rounded-pill px-3 py-1 text-dark">pendente</span>
+              {% elif p.status == "expirado" %}
+                <span class="badge bg-secondary bg-opacity-40 rounded-pill px-3 py-1">expirado</span>
+              {% elif p.status == "cancelado" %}
+                <span class="badge bg-danger bg-opacity-70 rounded-pill px-3 py-1">cancelado</span>
+              {% else %}
+                <span class="badge bg-danger bg-opacity-70 rounded-pill px-3 py-1">{{ p.status }}</span>
+              {% endif %}
+            </td>
+            <td>{{ p.criado_em|date:"d/m H:i" }}</td>
+            <td class="d-flex flex-wrap gap-1 justify-content-end">
+              <a class="btn btn-sm btn-outline-soft btn-icon" href="{% url 'adminx_pedido_detail' p.id %}" title="Ver pedido">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+
+              {% if p.status != "pago" %}
+              <form method="post" action="{% url 'adminx_pedido_mark_paid' p.id %}" onsubmit="return confirm('Marcar como PAGO?')">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-success btn-icon" title="Aprovar (pago)">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+              </form>
+              {% endif %}
+
+              {% if p.status != "cancelado" %}
+              <form method="post" action="{% url 'adminx_pedido_mark_cancel' p.id %}" onsubmit="return confirm('Cancelar pedido?')">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-danger btn-icon" title="Rejeitar / cancelar">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </form>
+              {% endif %}
+
+              <button class="btn btn-sm btn-gold" data-bs-toggle="modal" data-bs-target="#modalNumeros" data-pedido="{{ p.id }}">
+                <i class="fa-solid fa-hashtag me-1"></i>Números
+              </button>
+            </td>
+          </tr>
+          {% endwith %}{% endwith %}
+          {% empty %}
+          <tr><td colspan="8" class="text-secondary">Nenhum pedido.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if is_paginated %}
+      <nav class="mt-3">
+        <ul class="pagination pagination-sm mb-0">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">«</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">«</span></li>
+          {% endif %}
+
+          {% for i in paginator.page_range %}
+            {% if page_obj.number == i %}
+              <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+              <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">»</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">»</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal Números -->
+<div class="modal fade" id="modalNumeros" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content" style="background:#0f172a; color:#e5e7eb; border:1px solid #1f2937">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-hashtag me-2"></i>Números do pedido</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div id="numsLoading" class="text-secondary">Carregando...</div>
+        <div id="numsWrap" class="d-flex flex-wrap gap-2 mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-soft" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+// WhatsApp: adiciona ?text= com encodeURIComponent do data-text
+document.addEventListener('click', function(ev){
+  const a = ev.target.closest('a.wa-btn');
+  if(!a) return;
+  const base = a.getAttribute('href').split('?')[0];
+  const txt = a.getAttribute('data-text') || '';
+  a.setAttribute('href', base + '?text=' + encodeURIComponent(txt));
+});
+
+// Modal: carrega números via AJAX
+document.addEventListener('show.bs.modal', function(ev){
+  const m = ev.target;
+  if(m.id !== 'modalNumeros') return;
+  const trigger = ev.relatedTarget;
+  const pedidoId = trigger?.getAttribute('data-pedido');
+  const wrap = m.querySelector('#numsWrap');
+  const loading = m.querySelector('#numsLoading');
+
+  wrap.innerHTML = '';
+  loading.style.display = '';
+
+  const urlTemplate = "{% url 'adminx_pedido_numeros_json' 0 %}";
+  const url = urlTemplate.replace(/0\/?$/, pedidoId + "/");
+
+  fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(r => r.json())
+    .then(data => {
+      loading.style.display = 'none';
+      if(!data || !data.numeros || !data.numeros.length){
+        wrap.innerHTML = '<span class="text-secondary">Sem números para este pedido.</span>';
+        return;
+      }
+      wrap.innerHTML = data.numeros.map(n =>
+        '<span class="num-chip"><i class="fa-solid fa-hashtag"></i> '+ n +'</span>'
+      ).join('');
+    })
+    .catch(() => {
+      loading.style.display = 'none';
+      wrap.innerHTML = '<span class="text-danger">Falha ao carregar.</span>';
+    });
+});
+</script>
+{% endblock %}

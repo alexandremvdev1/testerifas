@@ -1,0 +1,60 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Buscar por número — Painel{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel-h">
+    <div class="h6 mb-0"><i class="fa-solid fa-magnifying-glass me-2"></i>Buscar por número</div>
+  </div>
+  <div class="panel-c">
+    <form class="row g-2 mb-3" method="get">
+      <div class="col-12 col-md-4">
+        <select name="rifa" class="form-select search">
+          <option value="">Selecione a rifa</option>
+          {% for r in rifas %}
+            <option value="{{ r.id }}" {% if rifa_f|add:""|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>{{ r.titulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <input name="n" class="form-control search" placeholder="Digite o número" value="{{ q|default:"" }}">
+      </div>
+      <div class="col-12 col-md-2">
+        <button class="btn btn-gold w-100">Buscar</button>
+      </div>
+      <div class="col-12 col-md-2">
+        <a class="btn btn-outline-light w-100" href="{% url 'adminx_lookup_numero' %}">Limpar</a>
+      </div>
+    </form>
+
+    {% if q and rifa_f %}
+      {% if numero %}
+        <div class="kpi mb-2">
+          <div class="h">Número</div>
+          <div class="v">#{{ numero.numero }} • {{ numero.get_status_display|default:numero.status }}</div>
+        </div>
+
+        {% if pedido %}
+          <div class="panel mt-2">
+            <div class="panel-h"><div class="h6 mb-0"><i class="fa-solid fa-user me-2"></i>Cliente</div></div>
+            <div class="panel-c">
+              <div><strong>Nome:</strong> {{ pedido.cliente.nome }}</div>
+              <div><strong>CPF:</strong> {{ pedido.cliente.cpf }}</div>
+              <div><strong>E-mail:</strong> {{ pedido.cliente.email }}</div>
+              <div><strong>Telefone:</strong> {{ pedido.cliente.telefone }}</div>
+              <div class="mt-2">
+                <a class="btn btn-sm btn-gold" href="{% url 'adminx_pedido_detail' pedido.id %}">
+                  <i class="fa-solid fa-eye me-1"></i>Ver pedido {{ pedido.protocolo }}
+                </a>
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="text-secondary">Sem pedido vinculado a este número.</div>
+        {% endif %}
+      {% else %}
+        <div class="text-danger">Número não encontrado para a rifa selecionada.</div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

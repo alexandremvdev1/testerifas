@@ -1,0 +1,134 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if modo == "novo" %}Nova Rifa{% else %}Editar Rifa{% endif %} — Painel{% endblock %}
+{% load form_extras %}
+{% block content %}
+<div class="panel">
+  <div class="panel-h">
+    <div class="h6 mb-0"><i class="fa-solid fa-ticket me-2"></i>{% if modo == "novo" %}Nova Rifa{% else %}Editar Rifa{% endif %}</div>
+    <a class="btn btn-sm btn-outline-light ms-auto" href="{% url 'adminx_rifas' %}">
+      <i class="fa-solid fa-arrow-left me-1"></i>Voltar
+    </a>
+  </div>
+  <div class="panel-c">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="row g-3">
+        <div class="col-md-7">
+          <label class="form-label">Título</label>
+          {{ form.titulo|add_class:"form-control" }}
+          {% for e in form.titulo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Slug</label>
+          {{ form.slug|add_class:"form-control" }}
+          <div class="form-text">sem espaços, ex: <code>moto-160c-2025</code></div>
+          {% for e in form.slug.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Descrição</label>
+          {{ form.descricao }}
+          {% for e in form.descricao.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Preço por número (R$)</label>
+          {{ form.preco_numero|add_class:"form-control" }}
+          {% for e in form.preco_numero.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Quantidade de números</label>
+          {{ form.quantidade_numeros|add_class:"form-control" }}
+          {% for e in form.quantidade_numeros.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Início das vendas</label>
+          {{ form.inicio_vendas }}
+          <div class="form-text">Formato: AAAA-MM-DDTHH:MM (ex: 2025-11-05T09:00)</div>
+          {% for e in form.inicio_vendas.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Fim das vendas</label>
+          {{ form.fim_vendas }}
+          {% for e in form.fim_vendas.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Banner (opcional)</label>
+          {{ form.banner|add_class:"form-control" }}
+          {% for e in form.banner.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label d-block">Ativo?</label>
+          {{ form.ativo }}
+          {% for e in form.ativo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label d-block">Permitir escolher número?</label>
+          {{ form.permitir_numero_escolhido }}
+          {% for e in form.permitir_numero_escolhido.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Limite por pedido</label>
+          {{ form.limite_por_pedido|add_class:"form-control" }}
+          {% for e in form.limite_por_pedido.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Minutos p/ expirar reserva</label>
+          {{ form.minutos_expiracao_reserva|add_class:"form-control" }}
+          {% for e in form.minutos_expiracao_reserva.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label d-block">Mostrar Top Compradores?</label>
+          {{ form.mostrar_top_compradores }}
+          {% for e in form.mostrar_top_compradores.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-gold"><i class="fa-solid fa-check me-2"></i>Salvar</button>
+        <a class="btn btn-outline-light" href="{% url 'adminx_rifas' %}">Cancelar</a>
+      </div>
+    </form>
+
+    {% for m in messages %}
+      <div class="alert alert-{{ m.tags|default:'info' }} mt-3">{{ m }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block head_extra %}
+{# Filtro para add_class (caso não tenha, remove as ocorrências |add_class) #}
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+  // auto-slug: preenche slug a partir do título (básico)
+  (function(){
+    const t = document.getElementById("id_titulo");
+    const s = document.getElementById("id_slug");
+    if (t && s) {
+      t.addEventListener("input", () => {
+        if (!s.value || s.value === s.dataset.autoFrom) {
+          const base = (t.value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const slug = base.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+          s.value = slug;
+          s.dataset.autoFrom = slug;
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

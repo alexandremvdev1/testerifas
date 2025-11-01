@@ -1,0 +1,739 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Pedido {{ pedido.protocolo }} • Rifas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root{
+      --bg:#0f1115;
+      --panel:#131620;
+      --ink:#e2e8f0;
+      --muted:#94a3b8;
+      --green:#22c55e;
+      --yellow:#facc15;
+      --red:#ef4444;
+      --radius:18px;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      background:radial-gradient(circle at top, #1e293b 0%, #0f1115 45%, #0f1115 100%);
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      color:var(--ink);
+      padding:18px 12px 80px;
+    }
+    .wrap{width:100%;max-width:520px;}
+    .card{
+      background:rgba(19,22,32,.85);
+      border:1px solid rgba(148,163,184,.08);
+      border-radius:var(--radius);
+      padding:16px 16px 14px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 18px 35px rgba(15,23,42,.55);
+      text-align:center;
+    }
+    .title-line{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:6px;
+      text-align:left;
+    }
+    .title{font-size:1rem;font-weight:650;}
+    .muted{color:var(--muted);font-size:.7rem;}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:.625rem;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      padding:3px 9px 4px;
+      border-radius:999px;
+      font-weight:600;
+    }
+    .badge-pago{background:rgba(34,197,94,.12);color:#bbf7d0;border:1px solid rgba(34,197,94,.45);}
+    .badge-pendente{background:rgba(250,204,21,.12);color:#fef9c3;border:1px solid rgba(250,204,21,.45);}
+    .badge-cancel{background:rgba(248,113,113,.12);color:#fee2e2;border:1px solid rgba(248,113,113,.35);}
+    .badge-expirado{background:rgba(248,113,113,.16);color:#fff;border:1px solid rgba(248,113,113,.4);}
+
+    .cliente-block{
+      margin-top:6px;
+      text-align:left;
+    }
+    .cliente-line{
+      font-size:.7rem;
+      color:var(--muted);
+      line-height:1.35;
+    }
+    .cliente-line strong,
+    .cliente-name{
+      font-weight:600;
+      color:#fff;
+      font-size:.78rem;
+    }
+
+    .section-title{
+      font-weight:600;
+      margin:14px 0 6px;
+      font-size:.75rem;
+      text-align:left;
+    }
+    .nums-grid{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      justify-content:flex-start;
+      text-align:left;
+    }
+    .num-pill{
+      background:rgba(15,23,42,.45);
+      border:1px solid rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:5px 10px 5px;
+      font-weight:600;
+      font-size:.75rem;
+      display:flex;
+      gap:6px;
+      align-items:center;
+    }
+    .num-pill small{font-size:.6rem;opacity:.5;}
+
+    .num-pill-prize{
+      background:linear-gradient(135deg, rgba(34,197,94,1) 0%, rgba(22,163,74,1) 100%);
+      border:1px solid rgba(190,242,100,.8);
+      color:#022c12;
+      box-shadow:0 8px 22px rgba(34,197,94,.35);
+      position:relative;
+    }
+    .num-pill-prize:before{
+      content:"★";
+      font-size:.6rem;
+      color:#fff;
+      background:rgba(0,0,0,.25);
+      width:16px;
+      height:16px;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .total-box{
+      background:rgba(15,23,42,.52);
+      border:1px solid rgba(255,255,255,.02);
+      border-radius:14px;
+      margin-top:12px;
+      padding:9px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      text-align:left;
+    }
+    .total-label{font-size:.7rem;color:var(--muted);}
+    .total-val{
+      font-size:1.35rem;
+      font-weight:760;
+    }
+
+    .alert-box{
+      background:rgba(248,113,113,.12);
+      border:1px solid rgba(248,113,113,.45);
+      border-radius:14px;
+      padding:6px 10px 6px;
+      font-size:.7rem;
+      margin-top:10px;
+      color:#fee2e2;
+      text-align:center;
+    }
+    .footer{
+      text-align:center;
+      margin-top:10px;
+      font-size:.65rem;
+      color:rgba(148,163,184,.6);
+    }
+    .hint{
+      margin-top:6px;
+      font-size:.62rem;
+      color:rgba(148,163,184,.65);
+      text-align:center;
+    }
+
+    .pix-box{
+      margin-top:14px;
+      background:rgba(15,23,42,.25);
+      border:1px solid rgba(148,163,184,.06);
+      border-radius:14px;
+      padding:10px 10px 12px;
+      display:none;
+      text-align:center;
+    }
+    .pix-title{
+      font-weight:650;
+      font-size:.78rem;
+      margin-bottom:4px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      justify-content:center;
+    }
+    .pix-textarea{
+      width:100%;
+      min-height:90px;
+      background:rgba(15,23,42,.55);
+      border:1px solid rgba(255,255,255,.02);
+      border-radius:10px;
+      color:#e2e8f0;
+      font-size:.68rem;
+      padding:6px 8px;
+      resize:vertical;
+      white-space:pre-wrap;
+      word-break:break-all;
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      text-align:left;
+    }
+    .pix-actions{
+      display:flex;
+      gap:8px;
+      margin-top:6px;
+      justify-content:center;
+    }
+    .btn{
+      background:linear-gradient(90deg,#22c55e 0%,#16a34a 100%);
+      border:none;
+      border-radius:10px;
+      padding:8px 10px 8px;
+      font-weight:600;
+      font-size:.7rem;
+      cursor:pointer;
+      color:#041308;
+      display:inline-flex;
+      gap:6px;
+      align-items:center;
+      text-decoration:none;
+    }
+    .qr-box{
+      margin-top:10px;
+      display:none;
+      justify-content:center;
+    }
+    .qr-box img, .qr-box canvas{
+      max-width:185px;
+      background:#fff;
+      border-radius:12px;
+      padding:4px;
+      box-shadow:0 12px 25px rgba(0,0,0,.25);
+    }
+    .exp-box{
+      margin-top:6px;
+      font-size:.66rem;
+      color:rgba(254,249,195,.9);
+      background:rgba(250,204,21,.08);
+      border:1px solid rgba(250,204,21,.28);
+      border-radius:10px;
+      padding:4px 8px 4px;
+      display:none;
+      text-align:center;
+    }
+    .exp-time{font-weight:700;color:#fff;}
+
+    @keyframes prizePulse {
+      0% { box-shadow:0 0 0 0 rgba(34,197,94,.35); }
+      100% { box-shadow:0 0 0 16px rgba(34,197,94,0); }
+    }
+    .instant-prize{
+      margin-top:14px;
+      background:linear-gradient(135deg, rgba(22,163,74,.98) 0%, rgba(5,46,22,.88) 100%);
+      border:1px solid rgba(190,242,100,.5);
+      border-radius:16px;
+      padding:10px 12px 10px;
+      display:none;
+      animation:prizePulse 1.5s ease-out infinite;
+      width:100%;
+      text-align:center;
+    }
+    .instant-prize-title{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-weight:750;
+      font-size:.85rem;
+      color:#fff;
+      white-space:nowrap;
+    }
+    .instant-prize p{
+      margin:5px 0 0;
+      font-size:.82rem;
+      color:#e2fbe8;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .instant-prize p b{
+      font-weight:700;
+      color:#fff;
+    }
+  </style>
+  <!-- lib simples de QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="pedido-card">
+      <div class="title-line">
+        <div>
+          <div class="title">Pedido {{ pedido.protocolo }}</div>
+          <div class="muted">Rifa: {{ pedido.rifa.titulo }}</div>
+        </div>
+        {% if pedido.status == 'PAGO' or pedido.status == pedido.PAGO %}
+          <span class="badge badge-pago" id="badge-status">✔ pago</span>
+        {% elif pedido.status == 'CANCELADO' or pedido.status == 'CANCEL' %}
+          <span class="badge badge-cancel" id="badge-status">✕ cancelado</span>
+        {% else %}
+          <span class="badge badge-pendente" id="badge-status">⌛ aguardando</span>
+        {% endif %}
+      </div>
+
+      <div class="cliente-block" id="cliente-block">
+        <div class="cliente-line">
+          Cliente: <span class="cliente-name" id="cliente-nome">{% if pedido.cliente %}{{ pedido.cliente.nome }}{% else %}—{% endif %}</span>
+        </div>
+        <div class="cliente-line" id="cliente-cpf">
+          {% if pedido.cliente and pedido.cliente.cpf %}CPF {{ pedido.cliente.cpf }}{% endif %}
+        </div>
+        <div class="cliente-line" id="cliente-tel">
+          {% if pedido.cliente and pedido.cliente.telefone %}{{ pedido.cliente.telefone }}{% endif %}
+        </div>
+      </div>
+
+      <div class="section-title">Seus números</div>
+      <div class="nums-grid" id="nums-grid">
+        {% if numeros %}
+          {% for n in numeros %}
+            <div class="num-pill" data-num="{{ n.numero|default:n }}">#{{ n.numero|default:n }}</div>
+          {% endfor %}
+        {% elif pedido.numeros.all.count %}
+          {% for n in pedido.numeros.all %}
+            <div class="num-pill" data-num="{{ n.numero }}">#{{ n.numero }}</div>
+          {% endfor %}
+        {% elif pedido.numero_set.all.count %}
+          {% for n in pedido.numero_set.all %}
+            <div class="num-pill" data-num="{{ n.numero }}">#{{ n.numero }}</div>
+          {% endfor %}
+        {% else %}
+          <p class="muted" id="no-nums">Nenhum número associado a este pedido.</p>
+        {% endif %}
+      </div>
+
+      <div class="total-box">
+        <div>
+          <div class="total-label">Total</div>
+          <div class="total-val" id="total-val">
+            R$ {{ pedido.total|default:"0,00" }}
+          </div>
+        </div>
+        {% if pedido.pago_em %}
+          <div class="muted" id="pago-em">pago em<br>{{ pedido.pago_em }}</div>
+        {% else %}
+          <div class="muted" id="pago-em" style="display:none;"></div>
+        {% endif %}
+      </div>
+
+      <!-- CAIXA PIX -->
+      <div class="pix-box" id="pix-box">
+        <div class="pix-title">💰 Pague via PIX agora</div>
+        <textarea id="pix-code" class="pix-textarea" readonly></textarea>
+        <div class="muted" style="font-size:.69rem;margin-top:4px;" id="pix-valor">
+          Valor: R$ {{ pedido.total|default:"0,00" }}
+        </div>
+        <div class="pix-actions">
+          <button class="btn" type="button" onclick="copyPix()">Copiar código PIX</button>
+          <a href="/r/{{ pedido.rifa.slug }}/" class="btn" id="btn-novo" style="display:none;">Gerar novo PIX</a>
+        </div>
+        <div class="qr-box" id="qr-box"></div>
+        <div class="exp-box" id="exp-box">
+          Este PIX expira em <span class="exp-time" id="exp-time">--:--</span>
+        </div>
+        <div class="muted" style="font-size:.6rem;margin-top:6px;" id="pix-info"></div>
+      </div>
+
+      <div class="instant-prize" id="instant-prize">
+        <div class="instant-prize-title">
+          🎉 <span>Você encontrou uma COTA PREMIADA</span>
+        </div>
+        <p id="instant-prize-text">Prêmio: —</p>
+      </div>
+
+      {% if not pedido.pago_em and pedido.status != 'PAGO' %}
+        <div class="alert-box" id="alert-box">
+          Pagamento pendente. Faça o PIX acima e aguarde a confirmação automática.
+        </div>
+      {% else %}
+        <div class="hint" id="hint-ok">✅ Pagamento confirmado. Obrigado por participar! 🎉</div>
+      {% endif %}
+    </div>
+
+    <div class="footer">
+      Dúvidas? Fale com o organizador da rifa.
+    </div>
+  </div>
+
+  <script>
+    const protocolo = "{{ pedido.protocolo }}";
+    let countdownTimer = null;
+    let pollTimer = null;
+    const POLL_MS = 3000; // 3 segundos ✅
+
+    function money(v){
+      if(v == null) return "R$ 0,00";
+      const num = typeof v === "number" ? v : parseFloat(String(v).replace(",", "."));
+      if(isNaN(num)) return "R$ 0,00";
+      return "R$ " + num.toFixed(2).replace(".", ",");
+    }
+
+    function maskCPF(cpf){
+      if(!cpf) return "";
+      const only = cpf.toString().replace(/\D/g,"");
+      if(only.length !== 11) return cpf;
+      return only.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,"$1.$2.$3-$4");
+    }
+
+    function copyPix(){
+      const ta = document.getElementById("pix-code");
+      if(!ta.value) return;
+      ta.select();
+      ta.setSelectionRange(0, 99999);
+      document.execCommand("copy");
+      alert("Código PIX copiado!");
+    }
+
+    function stopAllTimers(){
+      if (countdownTimer) clearInterval(countdownTimer);
+      if (pollTimer) clearInterval(pollTimer);
+    }
+
+    function startCountdown(seconds){
+      const expBox = document.getElementById("exp-box");
+      const expTime = document.getElementById("exp-time");
+      const pixBox  = document.getElementById("pix-box");
+      const badge   = document.getElementById("badge-status");
+      const alertBx = document.getElementById("alert-box");
+      const btnNovo = document.getElementById("btn-novo");
+
+      if(countdownTimer){
+        clearInterval(countdownTimer);
+      }
+      if(!seconds || seconds <= 0){
+        if (pollTimer) clearInterval(pollTimer);
+        pixBox.style.display = "none";
+        if(alertBx){
+          alertBx.textContent = "Pedido expirado. Refaça sua participação para gerar um novo PIX.";
+          alertBx.style.display = "block";
+        }
+        if(badge){
+          badge.textContent = "⏱ expirado";
+          badge.className = "badge badge-expirado";
+        }
+        if(btnNovo){
+          btnNovo.style.display = "inline-flex";
+        }
+        return;
+      }
+
+      expBox.style.display = "block";
+
+      function format(sec){
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+      }
+
+      expTime.textContent = format(seconds);
+
+      countdownTimer = setInterval(()=>{
+        seconds--;
+        if(seconds <= 0){
+          clearInterval(countdownTimer);
+          if (pollTimer) clearInterval(pollTimer);
+          pixBox.style.display = "none";
+          if(alertBx){
+            alertBx.textContent = "Pedido expirado. Refaça sua participação para gerar um novo PIX.";
+            alertBx.style.display = "block";
+          }
+          if(badge){
+            badge.textContent = "⏱ expirado";
+            badge.className = "badge badge-expirado";
+          }
+          if(btnNovo){
+            btnNovo.style.display = "inline-flex";
+          }
+          return;
+        }
+        expTime.textContent = format(seconds);
+      }, 1000);
+    }
+
+    function extractPedidoNumbers(data){
+      const out = [];
+      const list = data.numeros || data.cotas || [];
+      list.forEach(item=>{
+        if(typeof item === "number"){
+          out.push(item);
+        }else{
+          const n = item.numero || item.cota || item.num || item.id;
+          if(n != null) out.push(parseInt(n,10));
+        }
+      });
+      return out;
+    }
+
+    function extractPremiadas(data){
+      const list = data.cotas_premiadas || data.premios_instantaneos || [];
+      const out = [];
+      if(Array.isArray(list)){
+        list.forEach(item=>{
+          const num = item.numero || item.cota || item.num || item.id;
+          const val = item.valor_premio || item.valor || item.premio || item.prize || null;
+          if(num != null){
+            out.push({ numero: parseInt(num,10), valor: val });
+          }
+        });
+      }else if(data.premio_instantaneo){
+        const it = data.premio_instantaneo;
+        const num = it.numero || it.cota;
+        const val = it.valor_premio || it.valor || it.premio;
+        if(num != null){
+          out.push({ numero: parseInt(num,10), valor: val });
+        }
+      }
+      return out;
+    }
+
+    function highlightNumberInList(numero){
+      const grid = document.getElementById("nums-grid");
+      if(!grid) return;
+      const pills = grid.querySelectorAll(".num-pill");
+      pills.forEach(p=>{
+        const dataNum = p.getAttribute("data-num");
+        if(dataNum && parseInt(dataNum,10) === numero){
+          p.classList.add("num-pill-prize");
+        }
+      });
+    }
+
+    function showInstantPrize(hit){
+      const box = document.getElementById("instant-prize");
+      const txt = document.getElementById("instant-prize-text");
+      if(!box) return;
+      box.style.display = "block";
+      if(hit.valor){
+        txt.innerHTML = `Prêmio: <b>R$ ${hit.valor}</b>`;
+      }else if(hit.numero){
+        txt.textContent = `Número premiado: #${hit.numero}`;
+      }else{
+        txt.textContent = "Prêmio encontrado";
+      }
+      if(hit.numero){
+        highlightNumberInList(hit.numero);
+      }
+    }
+
+    // gera QR no navegador quando não vier base64 do backend
+    function renderFallbackQR(str){
+      if(!str) return;
+      const qrBox = document.getElementById("qr-box");
+      if(!qrBox) return;
+      qrBox.style.display = "flex";
+      qrBox.innerHTML = "";
+      if (window.QRCode){
+        new QRCode(qrBox, {
+          text: str,
+          width: 180,
+          height: 180,
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } else {
+        qrBox.textContent = "Leia o PIX com o app do banco.";
+      }
+    }
+
+    function renderPedido(data){
+      if(!data) return;
+
+      const badge    = document.getElementById("badge-status");
+      const numsGrid = document.getElementById("nums-grid");
+      const totalVal = document.getElementById("total-val");
+      const pagoEm   = document.getElementById("pago-em");
+      const alertBx  = document.getElementById("alert-box");
+      const hintOk   = document.getElementById("hint-ok");
+      const pixBox   = document.getElementById("pix-box");
+      const pixCode  = document.getElementById("pix-code");
+      const qrBox    = document.getElementById("qr-box");
+      const pixInfo  = document.getElementById("pix-info");
+      const pixValor = document.getElementById("pix-valor");
+
+      const clienteNome = document.getElementById("cliente-nome");
+      const clienteCPF  = document.getElementById("cliente-cpf");
+      const clienteTEL  = document.getElementById("cliente-tel");
+
+      const payData = data.pagamento ? data.pagamento : data;
+
+      // cliente
+      if(data.cliente){
+        if(data.cliente.nome && clienteNome){
+          clienteNome.textContent = data.cliente.nome;
+        }
+        if(data.cliente.cpf && clienteCPF){
+          clienteCPF.textContent = "CPF " + maskCPF(data.cliente.cpf);
+        }
+        if(data.cliente.telefone && clienteTEL){
+          clienteTEL.textContent = data.cliente.telefone;
+        }
+      }
+
+      // status
+      const st = (data.status || data.situacao || "").toString().toUpperCase();
+      if(st === "PAGO"){
+        stopAllTimers();
+        badge.textContent = "✔ pago";
+        badge.className = "badge badge-pago";
+        if(alertBx) alertBx.style.display = "none";
+        if(hintOk) hintOk.style.display = "block";
+        if(pixBox) pixBox.style.display = "none";
+
+        // cota premiada
+        const meusNumeros  = extractPedidoNumbers(data);
+        const premiadas    = extractPremiadas(data);
+        for(const p of premiadas){
+          if(meusNumeros.includes(p.numero)){
+            showInstantPrize(p);
+            break;
+          }
+        }
+      }else if(st.startsWith("CANCEL") || st === "EXPIRADO"){
+        stopAllTimers();
+        badge.textContent = st === "EXPIRADO" ? "⏱ expirado" : "✕ cancelado";
+        badge.className = st === "EXPIRADO" ? "badge badge-expirado" : "badge badge-cancel";
+        if(pixBox) pixBox.style.display = "none";
+      }else{
+        badge.textContent = "⌛ aguardando";
+        badge.className = "badge badge-pendente";
+      }
+
+      // total
+      if(data.total || data.valor){
+        totalVal.textContent = money(data.total || data.valor);
+        if(pixValor){
+          pixValor.textContent = "Valor: " + money(data.total || data.valor);
+        }
+      }
+
+      // pago em
+      if(data.pago_em || data.paid_at){
+        pagoEm.style.display = "block";
+        pagoEm.innerHTML = "pago em<br>" + (data.pago_em || data.paid_at);
+      }
+
+      // números
+      if(data.numeros || data.cotas){
+        numsGrid.innerHTML = "";
+        (data.numeros || data.cotas).forEach(n=>{
+          const div = document.createElement("div");
+          div.className = "num-pill";
+          let numVal;
+          if(typeof n === "number"){
+            numVal = n;
+            div.textContent = "#" + n;
+          }else{
+            const num = n.numero || n.cota || n.num || n.id;
+            numVal = num;
+            div.textContent = "#" + num;
+            if(n.status){
+              const sm = document.createElement("small");
+              sm.textContent = n.status.toString().toLowerCase();
+              div.appendChild(sm);
+            }
+          }
+          div.setAttribute("data-num", numVal);
+          numsGrid.appendChild(div);
+        });
+      }
+
+      // PIX
+      const pixStr =
+        payData.copia_cola ||
+        payData.pix_code ||
+        payData.pixCopiaECola ||
+        payData.location ||
+        "";
+
+      if(pixStr && st !== "PAGO"){
+        pixBox.style.display = "block";
+        pixCode.value = pixStr;
+        if(pixInfo){
+          pixInfo.textContent = "Protocolo: " + (data.protocolo || protocolo);
+        }
+      }
+
+      // QR
+      const qrStr =
+        payData.qr_code_base64 ||
+        payData.pix_qr ||
+        payData.imagemQrcode ||
+        "";
+      if(qrStr && st !== "PAGO"){
+        qrBox.style.display = "flex";
+        const src = qrStr.startsWith("data:") ? qrStr : `data:image/png;base64,${qrStr}`;
+        qrBox.innerHTML = `<img src="${src}" alt="PIX">`;
+      } else if (pixStr && st !== "PAGO") {
+        renderFallbackQR(pixStr);
+      }
+
+      // expiração
+      let expiresIn = null;
+      if(typeof data.expires_in === "number"){
+        expiresIn = data.expires_in;
+      }else if(payData && typeof payData.expires_in === "number"){
+        expiresIn = payData.expires_in;
+      }else if(data.expira_em){
+        const expDate = new Date(data.expira_em);
+        const now     = new Date();
+        const diffSec = Math.floor((expDate - now)/1000);
+        expiresIn = diffSec;
+      }
+      if(st !== "PAGO" && pixStr && typeof expiresIn === "number"){
+        startCountdown(expiresIn);
+      }else if(st !== "PAGO" && pixStr && expiresIn === 0){
+        startCountdown(0);
+      }
+    }
+
+    async function pollPedidoOnce(){
+      try{
+        const resp = await fetch(`/api/pedidos/${protocolo}/?v=${Date.now()}`, {
+          headers: {"Accept":"application/json"}
+        });
+        if(resp.ok){
+          const data = await resp.json();
+          renderPedido(data);
+        }
+      }catch(e){
+        console.warn("Não atualizei pedido via API:", e);
+      }
+    }
+
+    (async function init(){
+      await pollPedidoOnce();                     // 1ª carga
+      pollTimer = setInterval(pollPedidoOnce, POLL_MS); // monitora a cada 3s
+    })();
+  </script>
+</body>
+</html>

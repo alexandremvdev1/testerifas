@@ -1,0 +1,192 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Pedido {{ p.protocolo }} — Painel{% endblock %}
+
+{% block head_extra %}
+<style>
+  .page-head{
+    display:flex;
+    gap:.6rem;
+    align-items:center;
+    margin-bottom:1rem;
+    flex-wrap:wrap;
+  }
+  .page-head-title{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+
+  /* botão voltar único (topo) */
+  .btn-back{
+    background:radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), rgba(15,23,42,.05));
+    border:1px solid rgba(148,163,184,.35);
+    color:#fff !important;
+    border-radius:.75rem;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    padding:.4rem .85rem .45rem;
+    text-decoration:none !important;
+    transition:.15s ease;
+  }
+  .btn-back i{ font-size:.9rem; }
+  .btn-back:hover{
+    background:rgba(148,163,184,.14);
+    border-color:rgba(148,163,184,.4);
+  }
+
+  /* botão whatsapp fixo igual aos outros */
+  .btn-wpp-fixed{
+    background:#25d366;
+    border:1px solid #25d366;
+    width:46px;
+    min-height:32px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:.6rem;
+    color:#0f172a !important;
+    text-decoration:none !important;
+  }
+  .btn-wpp-fixed:hover{
+    background:#38e379;
+    color:#0f172a !important;
+  }
+
+  .num-chip{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.09);
+    border-radius:.7rem;
+    padding:.25rem .7rem;
+    display:inline-flex;
+    gap:.4rem;
+    align-items:center;
+  }
+  .info-label{ color:rgba(226,232,240,.5); font-size:.74rem; }
+  .info-value{ font-weight:500; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <a href="{% url 'adminx_pedidos' %}" class="btn-back">
+    <i class="fa-solid fa-arrow-left"></i>
+    Voltar
+  </a>
+  <div class="page-head-title">Pedido {{ p.protocolo }}</div>
+  <span class="text-secondary small">/ {{ p.rifa.titulo }}</span>
+</div>
+
+<div class="row g-3">
+  <!-- ESQUERDA -->
+  <div class="col-12 col-lg-6">
+    <div class="panel">
+      <div class="panel-h"><div class="h6 mb-0"><i class="fa-solid fa-circle-info me-2"></i>Geral</div></div>
+      <div class="panel-c vstack gap-2">
+        <div>
+          <span class="info-label d-block">Rifa:</span>
+          <span class="info-value">{{ p.rifa.titulo }}</span>
+        </div>
+        <div>
+          <span class="info-label d-block">Cliente:</span>
+          <span class="info-value">{{ p.cliente.nome }}{% if p.cliente.cpf %} ({{ p.cliente.cpf }}){% endif %}</span>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-.6" style="gap:.6rem;">
+          <div>
+            <span class="info-label">Email:</span>
+            <span class="info-value">{{ p.cliente.email|default:"—" }}</span>
+            <span class="info-label ms-2">Tel:</span>
+            <span class="info-value">{{ p.cliente.telefone|default:"—" }}</span>
+          </div>
+          {% if p.cliente.telefone %}
+            {% with fone=p.cliente.telefone|cut:" "|cut:"-"|cut:"("|cut:")"|cut:"." %}
+              <a class="btn-wpp-fixed"
+                 href="https://wa.me/{{ fone }}?text={{ 'Olá ' |add:p.cliente.nome|urlencode }}%2C%20sobre%20seu%20pedido%20{{ p.protocolo }}%20na%20rifa%20{{ p.rifa.titulo|urlencode }}..."
+                 target="_blank" title="Chamar no WhatsApp">
+                <i class="fa-brands fa-whatsapp"></i>
+              </a>
+            {% endwith %}
+          {% endif %}
+        </div>
+        <div>
+          <span class="info-label d-block">Status:</span>
+          {% if p.status == "pago" %}
+            <span class="badge bg-success bg-opacity-85 rounded-pill px-3 py-1">pago</span>
+          {% elif p.status == "pendente" %}
+            <span class="badge bg-warning bg-opacity-90 rounded-pill px-3 py-1 text-dark">pendente</span>
+          {% elif p.status == "expirado" %}
+            <span class="badge bg-secondary bg-opacity-50 rounded-pill px-3 py-1">expirado</span>
+          {% else %}
+            <span class="badge bg-danger bg-opacity-80 rounded-pill px-3 py-1">{{ p.status }}</span>
+          {% endif %}
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <span class="info-label d-block">Criado em:</span>
+            <span class="info-value">{{ p.criado_em|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div class="col-6">
+            <span class="info-label d-block">Pago em:</span>
+            <span class="info-value">
+              {% if p.pago_em %}
+                {{ p.pago_em|date:"d/m/Y H:i" }}
+              {% else %}—
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIREITA -->
+  <div class="col-12 col-lg-6">
+    <div class="panel">
+      <div class="panel-h"><div class="h6 mb-0"><i class="fa-solid fa-sack-dollar me-2"></i>Valores</div></div>
+      <div class="panel-c">
+        <div class="row">
+          <div class="col-6 text-secondary">Subtotal:</div>
+          <div class="col-6 text-end">R$ {{ p.subtotal }}</div>
+          <div class="col-6 text-secondary">Desc. regras:</div>
+          <div class="col-6 text-end">R$ {{ p.desconto_regras }}</div>
+          <div class="col-6 text-secondary">Desc. cupom:</div>
+          <div class="col-6 text-end">R$ {{ p.desconto_cupom }}</div>
+        </div>
+        <hr class="border-secondary">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="h6 mb-0">Total</div>
+          <div class="h4 mb-0">R$ {{ p.total }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NÚMEROS -->
+  <div class="col-12">
+    <div class="panel">
+      <div class="panel-h"><div class="h6 mb-0"><i class="fa-solid fa-hashtag me-2"></i>Números deste pedido</div></div>
+      <div class="panel-c">
+        <div class="d-flex flex-wrap gap-2">
+          {% for n in numeros %}
+            <span class="num-chip"><i class="fa-solid fa-hashtag"></i> {{ n }}</span>
+          {% empty %}
+            <span class="text-secondary">Sem números vinculados.</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AÇÃO ÚNICA (somente marcar pago, se precisar) -->
+  <div class="col-12">
+    {% if p.status != "pago" %}
+    <form method="post" action="{% url 'adminx_pedido_mark_paid' p.id %}">
+      {% csrf_token %}
+      <button class="btn btn-success d-inline-flex align-items-center gap-2">
+        <i class="fa-solid fa-check"></i> Marcar como PAGO
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

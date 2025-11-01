@@ -1,0 +1,220 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Rifas — Painel{% endblock %}
+
+{% block head_extra %}
+<style>
+  .page-head{
+    display:flex;
+    gap:.6rem;
+    align-items:center;
+    margin-bottom:1rem;
+    flex-wrap:wrap;
+  }
+  .page-head-title{
+    font-size:1.05rem;
+    font-weight:600;
+  }
+
+  /* busca */
+  .filter-input{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.08);
+    color:#e2e8f0;
+    height:31px;
+  }
+  .filter-input:focus{
+    border-color:rgba(148,163,184,.35);
+    background:rgba(15,23,42,.5);
+    box-shadow:none;
+  }
+  .btn-search{
+    background:rgba(15,23,42,.2);
+    border:1px solid rgba(226,232,240,.15);
+    color:#fff;
+    width:31px;
+    height:31px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .btn-search:hover{
+    background:rgba(226,232,240,.08);
+  }
+
+  /* botão NOVA RIFA */
+  .btn-new-rifa{
+    background:linear-gradient(180deg,#f1c94d 0%,#d9ad2f 100%);
+    border:1px solid rgba(250,204,21,.35);
+    color:#111 !important;
+    display:inline-flex;
+    align-items:center;
+    gap:.35rem;
+    height:31px;
+    padding:0 .85rem;
+    border-radius:.65rem;
+    font-weight:600;
+    text-decoration:none !important;
+  }
+  .btn-new-rifa:hover{
+    filter:brightness(1.03);
+    color:#000 !important;
+  }
+
+  /* tabela */
+  .rifas-table{
+    font-size:.78rem;
+    white-space:nowrap; /* 👈 evita quebrar */
+  }
+  .rifas-table td,
+  .rifas-table th{
+    vertical-align:middle;
+    border-color:rgba(15,23,42,.35);
+  }
+  .rifas-table thead th{
+    background:transparent;
+    color:rgba(226,232,240,.6);
+    border-bottom:1px solid rgba(148,163,184,.14);
+  }
+
+  .badge.badge-xs{
+    font-size:.6rem;
+    padding:.20rem .4rem .15rem;
+    border-radius:999px;
+  }
+
+  .btn-table{
+    background:rgba(15,23,42,.25);
+    border:1px solid rgba(148,163,184,.1);
+    color:#e2e8f0;
+  }
+  .btn-table:hover{
+    background:rgba(148,163,184,.12);
+    color:#fff;
+  }
+
+  /* link público inline, SEM caixinha e SEM quebrar */
+  .public-link-inline{
+    font-size:.67rem;
+    color:rgba(226,232,240,.9);
+    max-width:320px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:inline-flex;
+    align-items:center;
+    gap:.3rem;
+  }
+  .public-link-inline i{
+    color:rgba(226,232,240,.6);
+  }
+
+  .rifas-table a{
+    text-decoration:none !important;
+  }
+
+  @media (max-width: 992px){
+    .rifas-table{ white-space:normal; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-title">
+    <i class="fa-solid fa-ticket me-2"></i>Rifas
+  </div>
+
+  <form class="d-none d-md-flex ms-auto" method="get" action="">
+    <input class="form-control form-control-sm filter-input me-2"
+           style="max-width:190px;"
+           type="search"
+           name="q"
+           value="{{ q|default:'' }}"
+           placeholder="Buscar...">
+    <button class="btn-search" type="submit">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+  </form>
+
+  <a class="btn-new-rifa ms-2" href="{% url 'adminx_rifa_create' %}">
+    <i class="fa-solid fa-plus"></i> Nova rifa
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0 align-middle rifas-table">
+        <thead>
+          <tr>
+            <th style="min-width:160px;">Título</th>
+            <th style="width:80px;">Preço</th>
+            <th style="width:65px;">Qtd</th>
+            <th class="d-none d-md-table-cell" style="width:150px;">Período</th>
+            <th style="width:80px;">Status</th>
+            <th class="text-end" style="width:360px;">Ações e link público</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rifas %}
+          <tr>
+            <td class="fw-semibold">
+              <a href="{% url 'adminx_rifa_detail' r.id %}" class="text-light">
+                {{ r.titulo }}
+              </a>
+            </td>
+
+            <td>R$ {{ r.preco_numero }}</td>
+
+            <td>{{ r.quantidade_numeros }}</td>
+
+            <td class="d-none d-md-table-cell text-secondary" style="line-height:1.1;">
+              {% if r.inicio_vendas %}{{ r.inicio_vendas|date:"d/m H:i" }}{% else %}—{% endif %} /
+              {% if r.fim_vendas %}{{ r.fim_vendas|date:"d/m H:i" }}{% else %}—{% endif %}
+            </td>
+
+            <td>
+              {% if r.em_vendas %}
+                <span class="badge bg-success bg-opacity-85 badge-xs">vendas</span>
+              {% else %}
+                <span class="badge bg-secondary bg-opacity-45 badge-xs">off</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end">
+              <div class="d-flex justify-content-end align-items-center gap-2 flex-wrap">
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-gold" href="{% url 'adminx_rifa_detail' r.id %}" title="Painel da rifa">
+                    <i class="fa-solid fa-eye"></i>
+                  </a>
+                  <a class="btn btn-table" href="{% url 'adminx_rifa_edit' r.id %}" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </a>
+                  <a class="btn btn-table" href="/r/{{ r.slug }}/" target="_blank" title="Página pública">
+                    <i class="fa-solid fa-up-right-from-square"></i>
+                  </a>
+                </div>
+
+                <!-- link inline, SEM slug na coluna e SEM box -->
+                <span class="public-link-inline"
+                      title="{{ request.scheme }}://{{ request.get_host }}/r/{{ r.slug }}/">
+                  <i class="fa-solid fa-link"></i>
+                  {{ request.scheme }}://{{ request.get_host }}/r/{{ r.slug }}/
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-secondary py-4 text-center">
+              Nenhuma rifa cadastrada.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
