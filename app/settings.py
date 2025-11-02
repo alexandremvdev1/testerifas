@@ -19,10 +19,10 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 # ----------------------------------------
 # Hosts / CSRF
 # ----------------------------------------
-# você pediu “deixa aberto pra todos”
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+# deixa aberto pra todos (deploy rápido / testes)
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
 
-# se quiser confiar em tudo enquanto testa, deixa vazio
+# pode deixar vazio enquanto testa
 CSRF_TRUSTED_ORIGINS = [
     o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
 ]
@@ -82,7 +82,7 @@ WSGI_APPLICATION = "app.wsgi.application"
 # ----------------------------------------
 # Banco de dados
 # ----------------------------------------
-# padrão: sqlite (funciona local mesmo sem nada)
+# padrão: sqlite
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -90,7 +90,7 @@ DATABASES = {
     }
 }
 
-# se tiver DATABASE_URL, usa ele (Render/Postgres)
+# se tiver DATABASE_URL no Render, sobrescreve
 db_url = os.getenv("DATABASE_URL")
 if db_url:
     DATABASES["default"] = dj_database_url.parse(
@@ -136,12 +136,14 @@ rifas_static = BASE_DIR / "rifas" / "static"
 if rifas_static.exists():
     STATICFILES_DIRS.append(rifas_static)
 
+# ⚠️ aqui é o pulo do gato: sem manifest
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-      "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        # não usa Manifest enquanto não tiver collectstatic no Render
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
