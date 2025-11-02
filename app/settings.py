@@ -23,22 +23,22 @@ if env_hosts:
     # se vier da env, usamos o que veio
     ALLOWED_HOSTS = [h.strip() for h in env_hosts.split(",") if h.strip()]
 else:
-    # se não vier nada, libera geral (deploy rápido / testes)
+    # para facilitar teu deploy agora:
     ALLOWED_HOSTS = ["*"]
 
-# CSRF trusted
+# CSRF trusted (usa a env se tiver)
 env_csrf = os.getenv("CSRF_TRUSTED_ORIGINS")
 if env_csrf:
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in env_csrf.split(",") if o.strip()]
 else:
-    # se quiser liberar tudo pra teste:
-    # atenção: em produção coloque o domínio certo aqui
+    # em produção coloca aqui: https://seu-app.onrender.com
     CSRF_TRUSTED_ORIGINS = []
 
 # ----------------------------------------
 # Apps
 # ----------------------------------------
 INSTALLED_APPS = [
+    # Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     # terceiros
     "rest_framework",
 
-    # seus
+    # seus apps
     "rifas",
 ]
 
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
 # ----------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # whitenoise para servir estático no Render
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -69,6 +70,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "app.urls"
 
+# ----------------------------------------
+# Templates
+# ----------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -90,6 +94,7 @@ WSGI_APPLICATION = "app.wsgi.application"
 # ----------------------------------------
 # Banco
 # ----------------------------------------
+# padrão: sqlite (roda local sem nada)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -97,16 +102,17 @@ DATABASES = {
     }
 }
 
+# se vier DATABASE_URL (Render / Postgres), substitui
 db_url = os.getenv("DATABASE_URL")
 if db_url:
     DATABASES["default"] = dj_database_url.parse(
         db_url,
         conn_max_age=600,
-        ssl_require=True,
+        ssl_require=False,  # <- pro Postgres da Render / teu caso
     )
 
 # ----------------------------------------
-# Auth
+# Auth / Login
 # ----------------------------------------
 LOGIN_URL = "adminx_login"
 LOGIN_REDIRECT_URL = "adminx_dashboard"
@@ -124,7 +130,7 @@ REST_FRAMEWORK = {
 }
 
 # ----------------------------------------
-# i18n
+# Internacionalização
 # ----------------------------------------
 LANGUAGE_CODE = "pt-br"
 TIME_ZONE = "America/Araguaina"
@@ -154,10 +160,13 @@ STORAGES = {
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# ----------------------------------------
+# Django
+# ----------------------------------------
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ----------------------------------------
-# Outras integrações
+# Integrações
 # ----------------------------------------
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
