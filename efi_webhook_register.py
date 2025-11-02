@@ -1,114 +1,120 @@
-# efi_webhook_register.py
+import os
 import json
 import requests
 
-# ----------------------------------------------------
-# QUAL AMBIENTE?  "prod"  ou  "homolog"
-# ----------------------------------------------------
-ENV = "prod"   # troque para "homolog" quando quiser testar
+# --------------------------------------------------
+# CONFIGURAÇÕES
+# --------------------------------------------------
+# escolha aqui: "prod" ou "homolog"
+ENV = os.environ.get("EFI_ENV", "prod").lower()  # padrão: produção
 
-# ----------------------------------------------------
-# CERTS (precisa só quando o endpoint da EFI exige mTLS)
-# você já tem esses arquivos aí na pasta do conversor
-# ----------------------------------------------------
-CERT_PEM = r"C:\Users\ALEXANDRE\Desktop\conversor-p12-efi-main\producao-848943-meuappacoes_cert.pem"
-KEY_PEM  = r"C:\Users\ALEXANDRE\Desktop\conversor-p12-efi-main\producao-848943-meuappacoes_key.pem"
+# URL pública do seu Django no Fly
+WEBHOOK_URL = os.environ.get(
+    "EFI_WEBHOOK_URL",
+    "https://rifas-online.fly.dev/api/pagamentos/webhook/efi/"
+)
 
-# ----------------------------------------------------
-# DADOS DA SUA CONTA
-# ----------------------------------------------------
-# chave pix da sua conta (aquela que você mandou)
-CHAVE_PIX = "b70e7b3a-4bea-4d87-98a7-3a4699c09492"
+# credenciais produção
+PROD_CLIENT_ID = os.environ.get(
+    "EFI_CLIENT_ID",
+    "Client_Id_56397b13dca78b3615633762fbafffa5b459429f"
+)
+PROD_CLIENT_SECRET = os.environ.get(
+    "EFI_CLIENT_SECRET",
+    "Client_Secret_1aa8f2d624ed250728635afd45f6574b68aa12ee"
+)
 
-# seu endpoint público do Django (ngrok)
-DJANGO_WEBHOOK_URL = "https://overoptimistic-marsha-bunchily.ngrok-free.dev/api/pagamentos/webhook/efi/"
+# credenciais homolog
+H_CLIENT_ID = os.environ.get(
+    "EFI_H_CLIENT_ID",
+    "Client_Id_dcae576f2187401fd3d7569df3e118b93242542e"
+)
+H_CLIENT_SECRET = os.environ.get(
+    "EFI_H_CLIENT_SECRET",
+    "Client_Secret_3b55f9d544e25f9eb0a64b834e1c709eb6d24fc1"
+)
 
-CONFIG = {
-    "prod": {
-        "client_id": "Client_Id_56397b13dca78b3615633762fbafffa5b459429f",
-        "client_secret": "Client_Secret_1aa8f2d624ed250728635afd45f6574b68aa12ee",
-        "token_url": "https://pix.api.efipay.com.br/oauth/token",
-        "webhook_url": f"https://pix.api.efipay.com.br/v2/webhook/{CHAVE_PIX}",
-        # ⚠️ PRODUÇÃO: você já conseguiu token antes, então a gente
-        # reaproveita esse token aqui e nem tenta buscar outro
-        "last_working_token": (
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-            "eyJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwiY2xpZW50SWQiOiJDbGllbnRfSWRfNTYzOTdiMTNkY2E3OGIzNjE1NjMzNzYyZmJhZmZmYTViNDU5NDI5ZiIsImFjY291bnQiOjg0ODk0MywiYWNjb3VudF9jb2RlIjoiYmI3ZGY2YmVkOTA0MmNhNjFjNmUwZDE1MGFlOWQ4NDEiLCJzY29wZXMiOlsiY29iLnJlYWQiLCJjb2Iud3JpdGUiLCJwaXguc2VuZCIsIndlYmhvb2sucmVhZCIsIndlYmhvb2sud3JpdGUiXSwiZXhwaXJlc0luIjozNjAwLCJjb25maWd1cmF0aW9uIjp7Ing1dCNTMjU2IjoiZ2dQclVKZWFJai9DaVVuVTNRckFPL2NBWG1kL3FNMHNiRld4bSs0cGVCcz0ifSwiaWF0IjoxNzYyMDM4MjE2LCJleHAiOjE3NjIwNDE4MTZ9."
-            "STZ-Ad2uc54i9yhaQRUEPCawIi4NBliObu_vQbtIweQ"
-        ),
-        "need_mtls": True,  # o PUT do webhook exige mTLS → vai dar 400 no ngrok
-    },
-    "homolog": {
-        "client_id": "Client_Id_dcae576f2187401fd3d7569df3e118b93242542e",
-        "client_secret": "Client_Secret_3b55f9d544e25f9eb0a64b834e1c709eb6d24fc1",
-        "token_url": "https://pix-h.api.efipay.com.br/oauth/token",
-        "webhook_url": f"https://pix-h.api.efipay.com.br/v2/webhook/{CHAVE_PIX}",
-        "last_working_token": None,  # aqui vc ainda não conseguiu
-        "need_mtls": True,
-    },
-}
+# endpoints
+PROD_TOKEN_URL = "https://pix.api.efipay.com.br/oauth/token"
+PROD_WEBHOOK_URL = "https://pix.api.efipay.com.br/v2/webhook"
+H_TOKEN_URL = "https://pix-h.api.efipay.com.br/oauth/token"
+H_WEBHOOK_URL = "https://pix-h.api.efipay.com.br/v2/webhook"
+
+# a chave pix da sua conta
+PIX_CHAVE = os.environ.get(
+    "PIX_CHAVE",
+    "b70e7b3a-4bea-4d87-98a7-3a4699c09492"
+)
 
 
-def get_token(cfg: dict) -> str:
-    """
-    - PROD: usa primeiro o token que a gente já sabe que funcionou
-    - HOMOLOG: tenta pegar via mTLS; se o servidor fechar, mostra msg bonita
-    """
-    if cfg.get("last_working_token"):
-        print("USANDO TOKEN SALVO (produção)")
-        return cfg["last_working_token"]
+def get_cfg():
+    if ENV == "homolog":
+        return {
+            "token_url": H_TOKEN_URL,
+            "webhook_url": f"{H_WEBHOOK_URL}/{PIX_CHAVE}",
+            "client_id": H_CLIENT_ID,
+            "client_secret": H_CLIENT_SECRET,
+            "name": "HOMOLOG",
+        }
+    else:
+        return {
+            "token_url": PROD_TOKEN_URL,
+            "webhook_url": f"{PROD_WEBHOOK_URL}/{PIX_CHAVE}",
+            "client_id": PROD_CLIENT_ID,
+            "client_secret": PROD_CLIENT_SECRET,
+            "name": "PROD",
+        }
 
-    print("BUSCANDO TOKEN NA EFI...")
+
+def main():
+    cfg = get_cfg()
+    print(f"Registrando webhook na EFI — ambiente: {cfg['name']}")
+    print(f"→ URL do seu webhook: {WEBHOOK_URL}")
+
+    # 1) pega token
     try:
-        resp = requests.post(
+        token_resp = requests.post(
             cfg["token_url"],
             auth=(cfg["client_id"], cfg["client_secret"]),
             json={"grant_type": "client_credentials"},
-            # homolog tem pedido mTLS -> manda o cert
-            cert=(CERT_PEM, KEY_PEM),
             timeout=20,
         )
-    except requests.exceptions.RequestException as e:
-        print("ERRO ao pedir token:", e)
-        print("⚠ Homolog costuma fechar a conexão se o mTLS não bater certinho.")
-        raise
+    except requests.RequestException as e:
+        print("ERRO ao pedir token:", repr(e))
+        return
 
-    print("TOKEN STATUS:", resp.status_code)
-    print("TOKEN BODY:", resp.text)
+    print("TOKEN STATUS:", token_resp.status_code)
+    print("TOKEN BODY:", token_resp.text)
 
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+    if token_resp.status_code != 200:
+        print("Não consegui token, parando.")
+        return
 
+    token_data = token_resp.json()
+    access_token = token_data["access_token"]
 
-def register_webhook(cfg: dict, access_token: str):
+    # 2) registra webhook
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
-    payload = {"webhookUrl": DJANGO_WEBHOOK_URL}
+    payload = {
+        "webhookUrl": WEBHOOK_URL
+    }
 
     try:
-        resp = requests.put(
+        wh_resp = requests.put(
             cfg["webhook_url"],
             headers=headers,
             data=json.dumps(payload),
-            # o erro 400 que você está vendo é justamente porque AQUI a EFI
-            # exige mTLS e o seu ngrok não tem → mas vamos mandar mesmo assim
-            cert=(CERT_PEM, KEY_PEM),
             timeout=20,
         )
-    except requests.exceptions.RequestException as e:
-        print("ERRO ao registrar webhook:", e)
+    except requests.RequestException as e:
+        print("ERRO ao registrar webhook:", repr(e))
         return
 
-    print("WEBHOOK STATUS:", resp.status_code)
-    print("WEBHOOK BODY:", resp.text)
-
-
-def main():
-    cfg = CONFIG[ENV]
-    token = get_token(cfg)
-    register_webhook(cfg, token)
+    print("WEBHOOK STATUS:", wh_resp.status_code)
+    print("WEBHOOK BODY:", wh_resp.text)
 
 
 if __name__ == "__main__":
