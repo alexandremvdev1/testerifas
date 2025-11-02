@@ -1,9 +1,6 @@
 Django==5.2.3
 gunicorn==23.0.0
-psycopg[binary]==3.1.19
+psycopg[binary]==3.2.12
 dj-database-url==2.3.0
-whitenoise==6.8.2
 python-dotenv==1.0.1
-requests==2.32.3
-Pillow==11.0.0
-django-cors-headers==4.6.0
+whitenoise==6.7.0
