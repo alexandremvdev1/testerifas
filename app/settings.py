@@ -18,21 +18,21 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 # ----------------------------------------
 # Hosts
 # ----------------------------------------
-default_hosts = ["127.0.0.1", "localhost"]
 env_hosts = os.getenv("ALLOWED_HOSTS")
 if env_hosts:
-    ALLOWED_HOSTS = default_hosts + [
-        h.strip() for h in env_hosts.split(",") if h.strip()
-    ]
+    # se vier da env, usamos o que veio
+    ALLOWED_HOSTS = [h.strip() for h in env_hosts.split(",") if h.strip()]
 else:
-    # se não mandar nada, deixa só local
-    ALLOWED_HOSTS = default_hosts
+    # se não vier nada, libera geral (deploy rápido / testes)
+    ALLOWED_HOSTS = ["*"]
 
 # CSRF trusted
 env_csrf = os.getenv("CSRF_TRUSTED_ORIGINS")
 if env_csrf:
     CSRF_TRUSTED_ORIGINS = [o.strip() for o in env_csrf.split(",") if o.strip()]
 else:
+    # se quiser liberar tudo pra teste:
+    # atenção: em produção coloque o domínio certo aqui
     CSRF_TRUSTED_ORIGINS = []
 
 # ----------------------------------------
