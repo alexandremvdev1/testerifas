@@ -1,0 +1,42 @@
+# fly.toml app configuration file generated for rifas-online
+# https://fly.io/docs/reference/configuration/
+
+app = "rifas-online"
+primary_region = "gru"
+
+# se você quiser abrir um shell rápido no container
+console_command = "python manage.py shell"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # toda vez que fizer deploy, roda as migrações
+  release_command = "python manage.py migrate --noinput"
+
+[env]
+  PORT = "8000"
+  DJANGO_DEBUG = "false"
+
+# ✂️ tiramos o celery daqui
+[processes]
+  app = "gunicorn --bind :8000 --workers 2 app.wsgi:application"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# se você quiser servir estático direto pelo Fly,
+# aponta para onde o collectstatic jogou
+[[statics]]
+  guest_path = "/app/staticfiles"
+  url_prefix = "/static/"
