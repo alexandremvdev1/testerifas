@@ -10,17 +10,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ----------------------------------------
 # Básico / Segurança
 # ----------------------------------------
-# Em produção (Fly) vem do secret; em dev usa a que você já tinha
 SECRET_KEY = os.getenv(
     "SECRET_KEY",
     "django-insecure-d^@8398+$39b8o5k@&5mr0oh=(tlig3!pcwx*f3t_gdgqa$c#s",
 )
 
-# DEBUG controlado por env
+# Em produção (fly) vai vir como "false"
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
 
-# Hosts permitidos (Fly vai setar ALLOWED_HOSTS="rifas-online.fly.dev")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+
+# 👇 ADICIONADO: aceitar POST (login, checkout, etc.) do domínio do Fly
+# se quiser por domínio próprio depois, é só acrescentar
+raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "https://rifas-online.fly.dev")
+CSRF_TRUSTED_ORIGINS = [x.strip() for x in raw_csrf.split(",") if x.strip()]
+
+# cookies seguros quando estiver em https
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # ----------------------------------------
 # Apps
@@ -76,9 +83,6 @@ WSGI_APPLICATION = "app.wsgi.application"
 # ----------------------------------------
 # Banco de dados
 # ----------------------------------------
-# Prioridade:
-# 1) se tiver DATABASE_URL -> usa (Neon, Render, etc.)
-# 2) se não tiver -> cai no sqlite (dev)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
@@ -86,7 +90,7 @@ if DATABASE_URL:
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True,  # Neon precisa de SSL
+            ssl_require=True,
         )
     }
 else:
@@ -123,11 +127,7 @@ USE_TZ = True
 # Static / Media
 # ----------------------------------------
 STATIC_URL = "static/"
-
-# quando for coletar no Fly
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-# estáticos do app
 STATICFILES_DIRS = [
     BASE_DIR / "rifas" / "static",
 ]
