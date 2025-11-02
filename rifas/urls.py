@@ -132,4 +132,55 @@ urlpatterns = [
     # WEBHOOK (só EFI/registry)
     # =========================================================
     path("api/pagamentos/webhook/<str:provider_key>/", webhook_provider),
+    # a EFI vai bater aqui: .../efi/pix
+    path("api/pagamentos/webhook/<str:provider_key>/pix", webhook_provider),
+
+    path("adminx/empresa/", painel.empresa_form_view, name="adminx_empresa_form"),
+
+
+
+        # ===================== CUPONS =====================
+    path("adminx/coupons/", painel.adminx_coupons_list, name="adminx_coupons_list"),
+    path("adminx/coupons/novo/", painel.adminx_coupons_edit, name="adminx_coupons_new"),
+    path("adminx/coupons/<int:pk>/", painel.adminx_coupons_edit, name="adminx_coupons_edit"),
+
+    # ===================== REGRAS DE DESCONTO =====================
+    path("adminx/descontos/", painel.adminx_discount_rules_list, name="adminx_discount_rules_list"),
+    path("adminx/descontos/novo/", painel.adminx_discount_rules_edit, name="adminx_discount_rules_new"),
+    path("adminx/descontos/<int:pk>/", painel.adminx_discount_rules_edit, name="adminx_discount_rules_edit"),
+
+    # ===================== AFILIADOS =====================
+    path("adminx/afiliados/", painel.adminx_affiliates_list, name="adminx_affiliates_list"),
+    path("adminx/afiliados/novo/", painel.adminx_affiliates_edit, name="adminx_affiliates_new"),
+    path("adminx/afiliados/<int:pk>/", painel.adminx_affiliates_edit, name="adminx_affiliates_edit"),
+
+    # ===================== PROGRAMAS DE AFILIAÇÃO =====================
+    path("adminx/afiliacao/programas/", painel.adminx_affiliate_programs_list, name="adminx_affiliate_programs_list"),
+    path("adminx/afiliacao/programas/novo/", painel.adminx_affiliate_programs_edit, name="adminx_affiliate_programs_new"),
+    path("adminx/afiliacao/programas/<int:pk>/", painel.adminx_affiliate_programs_edit, name="adminx_affiliate_programs_edit"),
+
+    # ===================== LINKS DE AFILIADO =====================
+    path("adminx/afiliacao/links/", painel.adminx_affiliate_links_list, name="adminx_affiliate_links_list"),
+    path("adminx/afiliacao/links/novo/", painel.adminx_affiliate_links_edit, name="adminx_affiliate_links_new"),
+    path("adminx/afiliacao/links/<int:pk>/", painel.adminx_affiliate_links_edit, name="adminx_affiliate_links_edit"),
+
+    # ===================== CLIQUES =====================
+    path("adminx/afiliacao/cliques/", painel.adminx_affiliate_clicks_list, name="adminx_affiliate_clicks_list"),
+
+    # ===================== COMISSÕES =====================
+    path("adminx/afiliacao/comissoes/", painel.adminx_commissions_list, name="adminx_commissions_list"),
+    path("adminx/afiliacao/comissoes/<int:pk>/aprovar/", painel.adminx_commission_approve, name="adminx_commission_approve"),
+    path("adminx/afiliacao/comissoes/<int:pk>/pagar/", painel.adminx_commission_pay, name="adminx_commission_pay"),
+
+    # ===================== PAYOUTS =====================
+    path("adminx/afiliacao/payouts/", painel.adminx_payouts_list, name="adminx_payouts_list"),
+    path("adminx/afiliacao/payouts/novo/", painel.adminx_payouts_edit, name="adminx_payouts_new"),
+    path("adminx/afiliacao/payouts/<int:pk>/", painel.adminx_payouts_edit, name="adminx_payouts_edit"),
+
+    path("adminx/financeiro/", painel.financeiro_geral_view, name="adminx_financeiro_geral"),
+
+    path("adminx/empresa/", painel.empresa_form_view, name="adminx_empresa"),
+
+    path("adminx/webhook/efi/<int:pk>/", painel.registrar_webhook_efi_view, name="adminx_registrar_webhook_efi"),
+
 ]

@@ -181,7 +181,6 @@
           <div class="col-md-4">
             <label class="form-label">Quantidade de números</label>
             <input type="number" min="1" name="quantidade_numeros" class="form-control" value="{{ rifa.quantidade_numeros }}">
-           
           </div>
           <div class="col-md-4">
             <label class="form-label d-block">Status</label>
@@ -261,14 +260,7 @@
             <input type="file" name="banner" class="form-control">
             <div class="form-text">Imagem que aparece no topo da página pública.</div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label">Link WhatsApp (suporte)</label>
-            <input type="url" name="link_whatsapp" class="form-control" value="{{ rifa.link_whatsapp }}">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Link do grupo</label>
-            <input type="url" name="link_grupo" class="form-control" value="{{ rifa.link_grupo }}">
-          </div>
+          {# REMOVIDOS: link_whatsapp e link_grupo — agora ficam na Empresa #}
         </div>
       </div>
 

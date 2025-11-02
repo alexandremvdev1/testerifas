@@ -1,0 +1,71 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if program %}Editar programa{% else %}Novo programa{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-diagram-project me-2"></i>
+    {% if program %}Editar programa{% else %}Novo programa{% endif %}
+  </h4>
+  <a href="{% url 'adminx_affiliate_programs_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">Rifa</label>
+        <select name="rifa" class="form-select">
+          <option value="">— selecione —</option>
+          {% for r in rifas %}
+            <option value="{{ r.id }}" {% if program.rifa_id == r.id %}selected{% endif %}>{{ r.titulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Modelo de comissão</label>
+        <select name="modelo_comissao" class="form-select">
+          <option value="perc_venda" {% if program and program.modelo_comissao == 'perc_venda' %}selected{% endif %}>% da venda</option>
+          <option value="valor_fixo" {% if program and program.modelo_comissao == 'valor_fixo' %}selected{% endif %}>Valor fixo</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Valor / %</label>
+        <input type="number" step="0.01" name="valor_comissao" value="{{ program.valor_comissao|default_if_none:'0' }}" class="form-control">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Cookie (dias)</label>
+        <input type="number" name="cookie_days" value="{{ program.cookie_days|default_if_none:'7' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Atribuição</label>
+        <select name="atribuicao" class="form-select">
+          <option value="last_click" {% if program.atribuicao == 'last_click' %}selected{% endif %}>Último clique</option>
+          <option value="first_click" {% if program.atribuicao == 'first_click' %}selected{% endif %}>Primeiro clique</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" id="compra_propria" name="permitir_compra_propria" {% if program.permitir_compra_propria %}checked{% endif %}>
+          <label class="form-check-label" for="compra_propria">Permitir compra própria</label>
+        </div>
+        <div class="form-check form-check-inline ms-2">
+          <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if program.ativo|default:True %}checked{% endif %}>
+          <label class="form-check-label" for="ativo">Ativo</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

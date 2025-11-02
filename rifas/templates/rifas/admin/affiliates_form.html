@@ -1,0 +1,62 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if affiliate %}Editar afiliado{% else %}Novo afiliado{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-user-tie me-2"></i>
+    {% if affiliate %}Editar afiliado{% else %}Novo afiliado{% endif %}
+  </h4>
+  <a href="{% url 'adminx_affiliates_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">Nome *</label>
+        <input type="text" name="nome" value="{{ affiliate.nome|default_if_none:'' }}" class="form-control" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">E-mail *</label>
+        <input type="email" name="email" value="{{ affiliate.email|default_if_none:'' }}" class="form-control" required>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Telefone</label>
+        <input type="text" name="telefone" value="{{ affiliate.telefone|default_if_none:'' }}" class="form-control" placeholder="(63) 9 0000-0000">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Documento (CPF/CNPJ)</label>
+        <input type="text" name="documento" value="{{ affiliate.documento|default_if_none:'' }}" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="ativo" {% if affiliate.status == 'ativo' %}selected{% endif %}>Ativo</option>
+          <option value="inativo" {% if affiliate.status == 'inativo' %}selected{% endif %}>Inativo</option>
+          <option value="pendente" {% if affiliate.status == 'pendente' %}selected{% endif %}>Pendente</option>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Chave PIX</label>
+        <input type="text" name="pix_chave" value="{{ affiliate.pix_chave|default_if_none:'' }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Banco / Agência / Conta</label>
+        <input type="text" name="banco_agencia_conta" value="{{ affiliate.banco_agencia_conta|default_if_none:'' }}" class="form-control" placeholder="Banco X, ag. 0000, conta 00000-0">
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

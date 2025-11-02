@@ -1,0 +1,55 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if link %}Editar link{% else %}Novo link{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-link me-2"></i>
+    {% if link %}Editar link{% else %}Novo link{% endif %}
+  </h4>
+  <a href="{% url 'adminx_affiliate_links_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">Afiliado *</label>
+        <select name="affiliate" class="form-select" required>
+          {% for a in affiliates %}
+            <option value="{{ a.id }}" {% if link and link.affiliate_id == a.id %}selected{% endif %}>{{ a.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Programa *</label>
+        <select name="program" class="form-select" required>
+          {% for p in programs %}
+            <option value="{{ p.id }}" {% if link and link.program_id == p.id %}selected{% endif %}>
+              {% if p.rifa %}{{ p.rifa.titulo }}{% else %}Programa #{{ p.id }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Token</label>
+        <input type="text" name="token" value="{{ link.token|default_if_none:'' }}" class="form-control" placeholder="(deixe em branco p/ gerar)">
+      </div>
+      <div class="col-md-9">
+        <label class="form-label">URL de destino (opcional)</label>
+        <input type="url" name="url_destino" value="{{ link.url_destino|default_if_none:'' }}" class="form-control" placeholder="https://...">
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

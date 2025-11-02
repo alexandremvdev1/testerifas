@@ -1,0 +1,85 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if coupon %}Editar cupom{% else %}Novo cupom{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-tags me-2"></i>
+    {% if coupon %}Editar cupom{% else %}Novo cupom{% endif %}
+  </h4>
+  <a href="{% url 'adminx_coupons_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-4">
+        <label class="form-label">Código *</label>
+        <input type="text" name="codigo" value="{{ coupon.codigo|default_if_none:'' }}" class="form-control" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Rifa (opcional)</label>
+        <select name="rifa" class="form-select">
+          <option value="">— todas —</option>
+          {% for r in rifas %}
+            <option value="{{ r.id }}" {% if coupon.rifa_id == r.id %}selected{% endif %}>{{ r.titulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select">
+          <option value="percentual" {% if coupon and coupon.tipo == 'percentual' %}selected{% endif %}>Percentual (%)</option>
+          <option value="fixo" {% if coupon and coupon.tipo == 'fixo' %}selected{% endif %}>Valor fixo (R$)</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Valor *</label>
+        <input type="number" step="0.01" name="valor" value="{{ coupon.valor|default_if_none:'0' }}" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Uso máx. global</label>
+        <input type="number" name="max_uso_global" value="{{ coupon.max_uso_global|default_if_none:'' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Uso máx. por cliente</label>
+        <input type="number" name="max_uso_por_cliente" value="{{ coupon.max_uso_por_cliente|default_if_none:'' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Valor mínimo compra</label>
+        <input type="number" step="0.01" name="min_compra" value="{{ coupon.min_compra|default_if_none:'' }}" class="form-control">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Qtd mínima de números</label>
+        <input type="number" name="qtd_min_numeros" value="{{ coupon.qtd_min_numeros|default_if_none:'' }}" class="form-control">
+      </div>
+
+      <div class="col-12">
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" id="so_primeira" name="so_primeira_compra" {% if coupon.so_primeira_compra %}checked{% endif %}>
+          <label class="form-check-label" for="so_primeira">Somente 1ª compra</label>
+        </div>
+        <div class="form-check form-check-inline ms-2">
+          <input class="form-check-input" type="checkbox" id="acumulavel" name="acumulavel" {% if coupon.acumulavel %}checked{% endif %}>
+          <label class="form-check-label" for="acumulavel">Acumulável</label>
+        </div>
+        <div class="form-check form-check-inline ms-2">
+          <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if coupon.ativo|default:True %}checked{% endif %}>
+          <label class="form-check-label" for="ativo">Ativo</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if rule %}Editar regra de desconto{% else %}Nova regra{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-percent me-2"></i>
+    {% if rule %}Editar regra{% else %}Nova regra{% endif %}
+  </h4>
+  <a href="{% url 'adminx_discount_rules_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">Nome *</label>
+        <input type="text" name="nome" value="{{ rule.nome|default_if_none:'' }}" class="form-control" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Rifa</label>
+        <select name="rifa" class="form-select">
+          <option value="">— todas —</option>
+          {% for r in rifas %}
+            <option value="{{ r.id }}" {% if rule.rifa_id == r.id %}selected{% endif %}>{{ r.titulo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Qtd mínima de números</label>
+        <input type="number" name="qtd_numeros_min" value="{{ rule.qtd_numeros_min|default_if_none:'' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select">
+          <option value="percentual" {% if rule and rule.tipo == 'percentual' %}selected{% endif %}>Percentual (%)</option>
+          <option value="fixo" {% if rule and rule.tipo == 'fixo' %}selected{% endif %}>Valor fixo (R$)</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Valor *</label>
+        <input type="number" step="0.01" name="valor" value="{{ rule.valor|default_if_none:'0' }}" class="form-control" required>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Prioridade</label>
+        <input type="number" name="prioridade" value="{{ rule.prioridade|default_if_none:'0' }}" class="form-control">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Início</label>
+        <input type="datetime-local" name="inicio" value="{{ rule.inicio|date:'Y-m-d\\TH:i' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Fim</label>
+        <input type="datetime-local" name="fim" value="{{ rule.fim|date:'Y-m-d\\TH:i' }}" class="form-control">
+      </div>
+
+      <div class="col-12">
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" id="exclusiva" name="exclusiva" {% if rule.exclusiva %}checked{% endif %}>
+          <label class="form-check-label" for="exclusiva">Exclusiva (não acumula)</label>
+        </div>
+        <div class="form-check form-check-inline ms-2">
+          <input class="form-check-input" type="checkbox" id="ativo" name="ativo" {% if rule.ativo|default:True %}checked{% endif %}>
+          <label class="form-check-label" for="ativo">Ativa</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Afiliados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="fa-solid fa-user-tie me-2"></i>Afiliados</h4>
+  <a href="{% url 'adminx_affiliates_new' %}" class="btn btn-sm btn-primary">
+    <i class="fa-solid fa-plus me-1"></i>Novo afiliado
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-h">
+    <div class="title-sm">Lista de afiliados</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Telefone</th>
+            <th>Documento</th>
+            <th>Status</th>
+            <th>PIX</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in affiliates %}
+          <tr>
+            <td class="fw-semibold">{{ a.nome }}</td>
+            <td>{{ a.email }}</td>
+            <td>{{ a.telefone }}</td>
+            <td>{{ a.documento }}</td>
+            <td>
+              {% if a.status == "ativo" %}
+                <span class="badge bg-success bg-opacity-75 rounded-pill">ativo</span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill">{{ a.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if a.pix_chave %}
+                <span class="badge bg-info bg-opacity-75 rounded-pill">configurado</span>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'adminx_affiliates_edit' a.id %}" class="btn btn-sm btn-outline-light">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-secondary">Nenhum afiliado ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

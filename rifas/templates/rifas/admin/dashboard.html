@@ -3,6 +3,11 @@
 
 {% block head_extra %}
 <style>
+  /* deixar o conteúdo mais largo */
+  .page-wrapper-wide{
+    max-width: 1400px;
+  }
+
   .kpi-box{
     background: radial-gradient(600px 260px at 10% 0%, rgba(56,189,248,.12), rgba(16,22,32,0) 65%),
                 linear-gradient(180deg, rgba(16,22,32,.85) 0%, rgba(12,16,22,.35) 100%);
@@ -56,6 +61,7 @@
     width:100%;
     height:100%;
     object-fit:cover;
+    display:block;
   }
 
   /* quando o card for levado pra sidebar */
@@ -80,249 +86,396 @@
     font-size:.62rem;
     padding:.35rem .75rem;
   }
+
+  /* linha de atalhos (cupons/afiliados) */
+  .quick-actions{
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+  .quick-actions .btn{
+    border-radius:.7rem;
+  }
+
+  /* ====== MODAL ESCURO ====== */
+  .modal-dark .modal-content{
+    background: radial-gradient(420px 200px at 20% 0%, rgba(56,189,248,.08), rgba(15,23,42,1) 55%);
+    background-color: #0f172a;
+    border:1px solid rgba(148,163,184,.15);
+    border-radius:1rem;
+    box-shadow:0 18px 50px rgba(0,0,0,.35);
+  }
+  .modal-dark .modal-header{
+    border-bottom:1px solid rgba(148,163,184,.08);
+    background:rgba(15,23,42,.45);
+  }
+  .modal-dark .modal-title{
+    color:#e2e8f0;
+    font-size:.9rem;
+  }
+  .modal-dark .modal-body{
+    background:transparent;
+  }
+  .modal-dark .form-label{
+    color:#e2e8f0;
+    font-size:.7rem;
+  }
+  .modal-dark .form-control-dark,
+  .modal-dark .form-control{
+    background:rgba(15,23,42,.45);
+    border:1px solid rgba(148,163,184,.15);
+    color:#e2e8f0;
+  }
+  .modal-dark .form-control:focus{
+    border-color:rgba(59,130,246,.75);
+    box-shadow:0 0 0 .15rem rgba(59,130,246,.25);
+  }
+  .modal-dark .modal-footer{
+    border-top:1px solid rgba(148,163,184,.05);
+    background:rgba(15,23,42,.25);
+  }
+  .btn-soft-secondary{
+    background:rgba(15,23,42,.25);
+    border:1px solid rgba(148,163,184,.15);
+    color:#e2e8f0;
+  }
+  .btn-soft-secondary:hover{
+    background:rgba(148,163,184,.08);
+  }
+  .btn-soft-primary{
+    background:linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+    border:none;
+    color:#fff;
+    box-shadow:0 10px 25px rgba(14,165,233,.35);
+  }
+  .btn-soft-primary:hover{
+    filter:brightness(.95);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="page-wrapper-wide mx-auto">
 
-{# ---- KPIs ---- #}
-<div class="row g-3">
-  <div class="col-12 col-md-3">
-    <div class="kpi-box">
-      <div class="kpi-h"><i class="fa-solid fa-bolt text-warning"></i>Vendas hoje</div>
-      <div class="kpi-v">{{ vendas_hoje.qtd|default:0 }} pedido(s)</div>
-      <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_hoje.total|default:"0.00" }}</div>
+  {# ---- KPIs ---- #}
+  <div class="row g-3">
+    <div class="col-12 col-md-3">
+      <div class="kpi-box">
+        <div class="kpi-h"><i class="fa-solid fa-bolt text-warning"></i>Vendas hoje</div>
+        <div class="kpi-v">{{ vendas_hoje.qtd|default:0 }} pedido(s)</div>
+        <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_hoje.total|default:"0.00" }}</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi-box">
+        <div class="kpi-h"><i class="fa-solid fa-calendar-days text-info"></i>Vendas no mês</div>
+        <div class="kpi-v">{{ vendas_mes.qtd|default:0 }} pedido(s)</div>
+        <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_mes.total|default:"0.00" }}</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi-box">
+        <div class="kpi-h"><i class="fa-solid fa-ticket text-success"></i>Rifas ativas</div>
+        <div class="kpi-v">{{ rifas_ativas }}</div>
+        <div class="text-secondary" style="font-size:.7rem;">em andamento</div>
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <div class="kpi-box">
+        <div class="kpi-h"><i class="fa-solid fa-hourglass-half text-warning"></i>Pedidos pendentes</div>
+        <div class="kpi-v">{{ pendentes }}</div>
+        <div class="text-secondary" style="font-size:.7rem;">aguardando pagamento</div>
+      </div>
     </div>
   </div>
-  <div class="col-12 col-md-3">
-    <div class="kpi-box">
-      <div class="kpi-h"><i class="fa-solid fa-calendar-days text-info"></i>Vendas no mês</div>
-      <div class="kpi-v">{{ vendas_mes.qtd|default:0 }} pedido(s)</div>
-      <div class="text-secondary" style="font-size:.7rem;">R$ {{ vendas_mes.total|default:"0.00" }}</div>
-    </div>
-  </div>
-  <div class="col-12 col-md-3">
-    <div class="kpi-box">
-      <div class="kpi-h"><i class="fa-solid fa-ticket text-success"></i>Rifas ativas</div>
-      <div class="kpi-v">{{ rifas_ativas }}</div>
-      <div class="text-secondary" style="font-size:.7rem;">em andamento</div>
-    </div>
-  </div>
-  <div class="col-12 col-md-3">
-    <div class="kpi-box">
-      <div class="kpi-h"><i class="fa-solid fa-hourglass-half text-warning"></i>Pedidos pendentes</div>
-      <div class="kpi-v">{{ pendentes }}</div>
-      <div class="text-secondary" style="font-size:.7rem;">aguardando pagamento</div>
-    </div>
-  </div>
-</div>
 
-{# ---- linha: números + vendas (o card vai ser movido por JS) ---- #}
-<div class="row g-3 mt-1">
-  <div class="col-12 col-lg-4">
-    <div class="panel">
-      <div class="panel-h">
-        <div class="title-sm">
-          <i class="fa-solid fa-hashtag me-2"></i>Números (geral)
+  {# ---- ATALHOS (cupons, afiliados, etc) ---- #}
+  <div class="d-flex quick-actions mt-3">
+    <a href="{% url 'adminx_coupons_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-tags me-1"></i> Cupons
+    </a>
+    <a href="{% url 'adminx_discount_rules_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-percent me-1"></i> Regras de desconto
+    </a>
+    <a href="{% url 'adminx_affiliates_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-user-tie me-1"></i> Afiliados
+    </a>
+    <a href="{% url 'adminx_affiliate_programs_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-diagram-project me-1"></i> Programas
+    </a>
+    <a href="{% url 'adminx_affiliate_links_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-link me-1"></i> Links
+    </a>
+    <a href="{% url 'adminx_affiliate_clicks_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-mouse-pointer me-1"></i> Cliques
+    </a>
+    <a href="{% url 'adminx_commissions_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-sack-dollar me-1"></i> Comissões
+    </a>
+    <a href="{% url 'adminx_payouts_list' %}" class="btn btn-sm btn-outline-soft">
+      <i class="fa-solid fa-money-bill-transfer me-1"></i> Pagamentos afiliado
+    </a>
+  </div>
+
+  {# ---- linha: números + vendas (o card vai ser movido por JS) ---- #}
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-lg-4">
+      <div class="panel">
+        <div class="panel-h">
+          <div class="title-sm">
+            <i class="fa-solid fa-hashtag me-2"></i>Números (geral)
+          </div>
+        </div>
+        <div class="panel-c">
+          <div class="d-flex flex-wrap gap-2">
+            <span class="chip">
+              <i class="fa-regular fa-circle-check text-success"></i>
+              Livres: <strong class="ms-1">{{ numeros_status.livre|default:0 }}</strong>
+            </span>
+            <span class="chip">
+              <i class="fa-regular fa-clock text-warning"></i>
+              Reservados: <strong class="ms-1">{{ numeros_status.reservado|default:0 }}</strong>
+            </span>
+            <span class="chip">
+              <i class="fa-solid fa-check-double text-info"></i>
+              Pagos: <strong class="ms-1">{{ numeros_status.pago|default:0 }}</strong>
+            </span>
+          </div>
+
+          <form class="mt-3" method="post" action="{% url 'adminx_liberar_reservas' %}">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-soft">
+              <i class="fa-regular fa-clock me-1"></i>
+              Liberar reservas expiradas
+            </button>
+          </form>
         </div>
       </div>
-      <div class="panel-c">
-        <div class="d-flex flex-wrap gap-2">
-          <span class="chip">
-            <i class="fa-regular fa-circle-check text-success"></i>
-            Livres: <strong class="ms-1">{{ numeros_status.livre|default:0 }}</strong>
-          </span>
-          <span class="chip">
-            <i class="fa-regular fa-clock text-warning"></i>
-            Reservados: <strong class="ms-1">{{ numeros_status.reservado|default:0 }}</strong>
-          </span>
-          <span class="chip">
-            <i class="fa-solid fa-check-double text-info"></i>
-            Pagos: <strong class="ms-1">{{ numeros_status.pago|default:0 }}</strong>
-          </span>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="panel">
+        <div class="panel-h">
+          <div class="title-sm">
+            <i class="fa-solid fa-chart-line me-2"></i>Vendas recentes
+          </div>
+          <a class="btn btn-sm btn-outline-soft ms-auto" href="{% url 'adminx_export_pedidos_csv' %}">
+            <i class="fa-solid fa-file-csv me-1"></i>Exportar CSV
+          </a>
+        </div>
+        <div class="panel-c">
+          <canvas id="chartVendas" height="110"></canvas>
+        </div>
+      </div>
+    </div>
+
+    {# esse card será movido pra sidebar via JS #}
+    <div class="col-12 col-lg-3">
+      <div class="card-minha-conta" id="cardMinhaConta">
+        <div class="d-flex gap-3 align-items-center mb-3">
+          <div class="avatar-empresa">
+            {% if empresa and empresa.logo %}
+              <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome }}">
+            {% else %}
+              <i class="fa-regular fa-building text-secondary fs-4"></i>
+            {% endif %}
+          </div>
+          <div>
+            <div class="fw-semibold">Minha conta</div>
+            <div class="text-secondary small">
+              {% if empresa %}{{ empresa.nome }}{% else %}Sem empresa cadastrada{% endif %}
+            </div>
+          </div>
         </div>
 
-        <form class="mt-3" method="post" action="{% url 'adminx_liberar_reservas' %}">
-          {% csrf_token %}
-          <button class="btn btn-sm btn-outline-soft">
-            <i class="fa-regular fa-clock me-1"></i>
-            Liberar reservas expiradas
+        {% if empresa %}
+          <button type="button"
+                  class="btn btn-sm btn-outline-soft w-100"
+                  data-bs-toggle="modal"
+                  data-bs-target="#empresaModal">
+            <i class="fa-solid fa-user-gear me-1"></i> Editar
           </button>
+        {% else %}
+          <a href="{% url 'adminx_empresa_form' %}" class="btn btn-sm btn-outline-soft w-100">
+            <i class="fa-solid fa-plus me-1"></i> Cadastrar
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---- últimos pedidos ---- #}
+  <div class="panel mt-3">
+    <div class="panel-h">
+      <div class="title-sm">
+        <i class="fa-solid fa-receipt me-2"></i>Últimos pedidos
+      </div>
+    </div>
+    <div class="panel-c">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 table-darkish">
+          <thead>
+            <tr>
+              <th>Protocolo</th>
+              <th>Rifa</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Criado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in ultimos_pedidos %}
+            <tr>
+              <td class="fw-semibold">{{ p.protocolo }}</td>
+              <td>{{ p.rifa.titulo }}</td>
+              <td>{{ p.cliente.nome }}</td>
+              <td>R$ {{ p.total }}</td>
+              <td>
+                {% if p.status == "pago" %}
+                  <span class="badge bg-success bg-opacity-80 rounded-pill px-3 py-1">pago</span>
+                {% elif p.status == "pendente" %}
+                  <span class="badge bg-warning bg-opacity-80 rounded-pill px-3 py-1 text-dark">pendente</span>
+                {% elif p.status == "expirado" %}
+                  <span class="badge bg-secondary bg-opacity-50 rounded-pill px-3 py-1">expirado</span>
+                {% else %}
+                  <span class="badge bg-danger bg-opacity-80 rounded-pill px-3 py-1">{{ p.status }}</span>
+                {% endif %}
+              </td>
+              <td>{{ p.criado_em|date:"d/m H:i" }}</td>
+              <td>
+                <a href="{% url 'adminx_pedido_detail' p.id %}" class="btn btn-sm btn-accent">
+                  <i class="fa-solid fa-eye me-1"></i>Ver
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-secondary">Sem pedidos.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# ================== MODAL MINHA CONTA (só aparece se já tem empresa) ================== #}
+  {% if empresa %}
+  <div class="modal fade modal-dark" id="empresaModal" tabindex="-1" aria-labelledby="empresaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="empresaModalLabel">
+            <i class="fa-regular fa-building me-1"></i>
+            Editar empresa
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <form method="post" action="{% url 'adminx_empresa_update' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="empresa_id" value="{{ empresa.id }}">
+          <div class="modal-body">
+            <div class="mb-2 text-secondary small">
+              Esses dados serão usados nos relatórios/comprovantes e na identificação da ação.
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nome / Razão social</label>
+              <input type="text"
+                     name="nome"
+                     value="{{ empresa.nome }}"
+                     class="form-control form-control-dark"
+                     required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">CPF / CNPJ</label>
+              <input type="text"
+                     name="documento"
+                     value="{{ empresa.documento }}"
+                     class="form-control form-control-dark"
+                     placeholder="000.000.000-00 ou 00.000.000/0000-00">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">E-mail</label>
+              <input type="email"
+                     name="email"
+                     value="{{ empresa.email }}"
+                     class="form-control form-control-dark">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Telefone</label>
+              <input type="text"
+                     name="telefone"
+                     value="{{ empresa.telefone }}"
+                     class="form-control form-control-dark"
+                     placeholder="(63) 9 0000-0000">
+            </div>
+
+            <hr class="text-secondary">
+
+            <div class="mb-3">
+              <label class="form-label">WhatsApp de suporte</label>
+              <input type="url"
+                     name="whatsapp_suporte"
+                     value="{{ empresa.whatsapp_suporte }}"
+                     class="form-control form-control-dark"
+                     placeholder="https://wa.me/5563...">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">WhatsApp do grupo</label>
+              <input type="url"
+                     name="whatsapp_grupo"
+                     value="{{ empresa.whatsapp_grupo }}"
+                     class="form-control form-control-dark"
+                     placeholder="https://chat.whatsapp.com/...">
+            </div>
+
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Taxa padrão (%)</label>
+                <input type="number"
+                       step="0.01"
+                       name="taxa_admin_percentual_padrao"
+                       value="{{ empresa.taxa_admin_percentual_padrao|default:'0.00' }}"
+                       class="form-control form-control-dark">
+              </div>
+              <div class="col-6">
+                <label class="form-label">Taxa fixa (R$)</label>
+                <input type="number"
+                       step="0.01"
+                       name="taxa_admin_fixa_padrao"
+                       value="{{ empresa.taxa_admin_fixa_padrao|default:'0.00' }}"
+                       class="form-control form-control-dark">
+              </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+              <label class="form-label">Logo</label>
+              <input type="file" name="logo" accept="image/*" class="form-control form-control-dark">
+              {% if empresa.logo %}
+                <div class="mt-2 small text-secondary">Logo atual:</div>
+                <img src="{{ empresa.logo.url }}" alt="Logo" style="max-height:40px;border-radius:.35rem;">
+              {% endif %}
+            </div>
+
+            <div class="small text-secondary mt-2">
+              Para configurar a conta EFI/Pix completa, acesse:
+              <a href="{% url 'adminx_empresa_form' %}" class="link-light">Configurar empresa</a>
+            </div>
+          </div>
+          <div class="modal-footer d-flex justify-content-between">
+            <button type="button" class="btn btn-sm btn-soft-secondary" data-bs-dismiss="modal">
+              <i class="fa-solid fa-xmark me-1"></i> Fechar
+            </button>
+            <button type="submit" class="btn btn-sm btn-soft-primary">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Salvar
+            </button>
+          </div>
         </form>
       </div>
     </div>
   </div>
+  {% endif %}
 
-  <div class="col-12 col-lg-5">
-    <div class="panel">
-      <div class="panel-h">
-        <div class="title-sm">
-          <i class="fa-solid fa-chart-line me-2"></i>Vendas recentes
-        </div>
-        <a class="btn btn-sm btn-outline-soft ms-auto" href="{% url 'adminx_export_pedidos_csv' %}">
-          <i class="fa-solid fa-file-csv me-1"></i>Exportar CSV
-        </a>
-      </div>
-      <div class="panel-c">
-        <canvas id="chartVendas" height="110"></canvas>
-      </div>
-    </div>
-  </div>
-
-  {# esse card será movido pra sidebar via JS #}
-  <div class="col-12 col-lg-3">
-    <div class="card-minha-conta" id="cardMinhaConta">
-      <div class="d-flex gap-3 align-items-center mb-3">
-        <div class="avatar-empresa">
-          {% if empresa and empresa.logo %}
-            <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome }}">
-          {% else %}
-            <i class="fa-regular fa-building text-secondary fs-4"></i>
-          {% endif %}
-        </div>
-        <div>
-          <div class="fw-semibold">Minha conta</div>
-          <div class="text-secondary small">
-            {% if empresa %}{{ empresa.nome }}{% else %}Sem empresa cadastrada{% endif %}
-          </div>
-        </div>
-      </div>
-      <button type="button"
-              class="btn btn-sm btn-outline-soft w-100"
-              data-bs-toggle="modal"
-              data-bs-target="#empresaModal">
-        <i class="fa-solid fa-user-gear me-1"></i> {% if empresa %}Editar{% else %}Cadastrar{% endif %}
-      </button>
-    </div>
-  </div>
 </div>
-
-{# ---- últimos pedidos ---- #}
-<div class="panel mt-3">
-  <div class="panel-h">
-    <div class="title-sm">
-      <i class="fa-solid fa-receipt me-2"></i>Últimos pedidos
-    </div>
-  </div>
-  <div class="panel-c">
-    <div class="table-responsive">
-      <table class="table table-sm align-middle mb-0 table-darkish">
-        <thead>
-          <tr>
-            <th>Protocolo</th>
-            <th>Rifa</th>
-            <th>Cliente</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Criado</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in ultimos_pedidos %}
-          <tr>
-            <td class="fw-semibold">{{ p.protocolo }}</td>
-            <td>{{ p.rifa.titulo }}</td>
-            <td>{{ p.cliente.nome }}</td>
-            <td>R$ {{ p.total }}</td>
-            <td>
-              {% if p.status == "pago" %}
-                <span class="badge bg-success bg-opacity-80 rounded-pill px-3 py-1">pago</span>
-              {% elif p.status == "pendente" %}
-                <span class="badge bg-warning bg-opacity-80 rounded-pill px-3 py-1 text-dark">pendente</span>
-              {% elif p.status == "expirado" %}
-                <span class="badge bg-secondary bg-opacity-50 rounded-pill px-3 py-1">expirado</span>
-              {% else %}
-                <span class="badge bg-danger bg-opacity-80 rounded-pill px-3 py-1">{{ p.status }}</span>
-              {% endif %}
-            </td>
-            <td>{{ p.criado_em|date:"d/m H:i" }}</td>
-            <td>
-              <a href="{% url 'adminx_pedido_detail' p.id %}" class="btn btn-sm btn-accent">
-                <i class="fa-solid fa-eye me-1"></i>Ver
-              </a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="7" class="text-secondary">Sem pedidos.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-{# ================== MODAL MINHA CONTA ================== #}
-<div class="modal fade" id="empresaModal" tabindex="-1" aria-labelledby="empresaModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-md">
-    <div class="modal-content bg-darkish">
-      <div class="modal-header">
-        <h5 class="modal-title" id="empresaModalLabel">
-          <i class="fa-regular fa-building me-1"></i>
-          {% if empresa %}Editar empresa{% else %}Cadastrar empresa{% endif %}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <form method="post" action="{% url 'adminx_empresa_update' %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% if empresa %}
-          <input type="hidden" name="empresa_id" value="{{ empresa.id }}">
-        {% endif %}
-        <div class="modal-body">
-          <div class="mb-2 text-secondary small">
-            Esses dados serão usados nos relatórios/comprovantes e na identificação da ação.
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Nome / Razão social</label>
-            <input type="text"
-                   name="nome"
-                   value="{% if empresa %}{{ empresa.nome }}{% else %}{{ request.user.get_full_name|default:request.user.username }}{% endif %}"
-                   class="form-control form-control-dark"
-                   required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">CPF / CNPJ</label>
-            <input type="text"
-                   name="documento"
-                   value="{% if empresa %}{{ empresa.documento }}{% endif %}"
-                   class="form-control form-control-dark"
-                   placeholder="000.000.000-00 ou 00.000.000/0000-00">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">E-mail</label>
-            <input type="email"
-                   name="email"
-                   value="{% if empresa %}{{ empresa.email }}{% else %}{{ request.user.email }}{% endif %}"
-                   class="form-control form-control-dark">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Telefone</label>
-            <input type="text"
-                   name="telefone"
-                   value="{% if empresa %}{{ empresa.telefone }}{% endif %}"
-                   class="form-control form-control-dark"
-                   placeholder="(63) 9 0000-0000">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Logo</label>
-            <input type="file" name="logo" accept="image/*" class="form-control form-control-dark">
-            {% if empresa and empresa.logo %}
-              <div class="mt-2 small text-secondary">Logo atual:</div>
-              <img src="{{ empresa.logo.url }}" alt="Logo" style="max-height:40px;border-radius:.35rem;">
-            {% endif %}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
-          <button type="submit" class="btn btn-sm btn-primary">
-            <i class="fa-solid fa-floppy-disk me-1"></i> Salvar
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
 
 {% block scripts_extra %}
@@ -388,12 +541,21 @@
         }
       });
       if (sairLink) {
-        // insere logo depois do sair
         sairLink.insertAdjacentElement('afterend', card);
-        // garante largura 100%
         card.style.width = '100%';
       }
     }
+
+    // 👉 trocar o link "Admin Django" pelo "Financeiro geral"
+    const allLinks = document.querySelectorAll('a');
+    allLinks.forEach(function(a){
+      if (a.textContent.trim().toLowerCase().includes('admin django')) {
+        a.textContent = 'Financeiro geral';
+        a.href = "{% url 'adminx_financeiro_geral' %}";
+        a.classList.add('btn','btn-sm','btn-outline-light');
+        a.insertAdjacentHTML('afterbegin','<i class="fa-solid fa-cash-register me-1"></i>');
+      }
+    });
   })();
 </script>
 {% endblock %}

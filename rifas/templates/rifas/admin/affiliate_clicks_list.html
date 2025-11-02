@@ -1,0 +1,40 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Cliques de afiliado{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="fa-solid fa-mouse-pointer me-2"></i>Cliques de afiliado</h4>
+
+<div class="panel">
+  <div class="panel-h">
+    <div class="title-sm">Últimos cliques (200 máx.)</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Data/Hora</th>
+            <th>Afiliado</th>
+            <th>Rifa</th>
+            <th>IP</th>
+            <th>User Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in clicks %}
+          <tr>
+            <td>{{ c.clicked_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ c.link.affiliate.nome }}</td>
+            <td>{% if c.link.program.rifa %}{{ c.link.program.rifa.titulo }}{% else %}—{% endif %}</td>
+            <td><small>{{ c.ip_address }}</small></td>
+            <td><small class="text-secondary">{{ c.user_agent|default:"—" }}</small></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-secondary">Nenhum clique registrado ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

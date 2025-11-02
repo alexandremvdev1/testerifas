@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import dj_database_url  # 👈 já está no requirements
 
 # ----------------------------------------
 # Paths
@@ -15,24 +14,17 @@ SECRET_KEY = os.getenv(
     "django-insecure-d^@8398+$39b8o5k@&5mr0oh=(tlig3!pcwx*f3t_gdgqa$c#s",
 )
 
-# Em produção (fly) vai vir como "false"
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+# Em desenvolvimento: deixa ligado
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
-
-# 👇 ADICIONADO: aceitar POST (login, checkout, etc.) do domínio do Fly
-# se quiser por domínio próprio depois, é só acrescentar
-raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "https://rifas-online.fly.dev")
-CSRF_TRUSTED_ORIGINS = [x.strip() for x in raw_csrf.split(",") if x.strip()]
-
-# cookies seguros quando estiver em https
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+# Só local mesmo
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 # ----------------------------------------
 # Apps
 # ----------------------------------------
 INSTALLED_APPS = [
+    # Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -40,7 +32,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # Terceiros
     "rest_framework",
+
+    # Seus apps
     "rifas",
 ]
 
@@ -81,25 +76,15 @@ TEMPLATES = [
 WSGI_APPLICATION = "app.wsgi.application"
 
 # ----------------------------------------
-# Banco de dados
+# Banco de dados (APENAS LOCAL)
 # ----------------------------------------
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True,
-        )
+# Forçado para sqlite, não olha DATABASE_URL
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 # ----------------------------------------
 # Auth / Login
@@ -111,8 +96,12 @@ LOGIN_REDIRECT_URL = "adminx_dashboard"
 # REST Framework
 # ----------------------------------------
 REST_FRAMEWORK = {
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
 }
 
 # ----------------------------------------
@@ -126,13 +115,15 @@ USE_TZ = True
 # ----------------------------------------
 # Static / Media
 # ----------------------------------------
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    BASE_DIR / "rifas" / "static",
-]
 
-MEDIA_URL = "media/"
+STATICFILES_DIRS = []
+rifas_static = BASE_DIR / "rifas" / "static"
+if rifas_static.exists():
+    STATICFILES_DIRS.append(rifas_static)
+
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # ----------------------------------------
@@ -144,4 +135,19 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Integrações / Config do projeto
 # ----------------------------------------
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
-SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
+SITE_URL = "http://127.0.0.1:8000"
+
+# Logs de SQL em dev (ajuda a ver erros de migrate)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}

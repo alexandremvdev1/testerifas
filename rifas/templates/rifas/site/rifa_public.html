@@ -429,6 +429,34 @@
       justify-content:center;
       font-size:1.2rem;
     }
+
+    /* NOVO: caixinha de info dentro do modal (ficou no tom escuro pra combinar) */
+    .info-box-modal{
+      background:rgba(148,163,184,.08);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:14px;
+      padding:8px 10px 8px;
+      display:flex;
+      gap:8px;
+      align-items:flex-start;
+      margin:6px 0 12px;
+    }
+    .info-box-icon{
+      width:24px;
+      height:24px;
+      border-radius:999px;
+      background:rgba(34,197,94,.28);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:.9rem;
+    }
+    .info-box-text{
+      font-size:.68rem;
+      color:#e2e8f0;
+      line-height:1.05rem;
+    }
+
     .form-group{margin-bottom:10px;}
     .form-group label{font-size:.78rem;display:block;margin-bottom:3px;color:var(--muted);}
     .form-control{
@@ -723,6 +751,15 @@
         <span class="modal-title-icon">🧍</span>
         Finalizar participação
       </div>
+
+      <!-- NOVO: caixinha de info com quantidade -->
+      <div class="info-box-modal" id="checkout-info-box">
+        <div class="info-box-icon">i</div>
+        <div class="info-box-text">
+          Você está adquirindo <strong id="checkout-qtd">1</strong> número(s) da ação <strong>{{ rifa.titulo }}</strong>.
+        </div>
+      </div>
+
       <!-- STEP 1 -->
       <div id="step-cpf">
         <p class="small-muted">Digite seu CPF para continuar. Se já tiver cadastro, vamos direto pro pagamento.</p>
@@ -738,6 +775,23 @@
             <input type="text" id="cli-cpf" class="form-control" placeholder="000.000.000-00" inputmode="numeric" maxlength="14">
           </div>
         </div>
+
+        <!-- NOVO: CUPOM na etapa 1 -->
+        <div class="form-group">
+          <label>Cupom de desconto (opcional)</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7h18"></path>
+                <path d="M3 17h18"></path>
+                <path d="M8 7v10"></path>
+                <path d="M16 7v10"></path>
+              </svg>
+            </span>
+            <input type="text" id="cli-cupom" class="form-control" placeholder="EX: DESCONTO10">
+          </div>
+        </div>
+
         <button class="btn-primary" onclick="checkCPF()">
           <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12l5 5L20 7"/>
@@ -789,6 +843,23 @@
             </div>
           </div>
         </div>
+
+        <!-- NOVO: CUPOM na etapa 2 também -->
+        <div class="form-group">
+          <label>Cupom de desconto (opcional)</label>
+          <div class="input-wrap">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7h18"></path>
+                <path d="M3 17h18"></path>
+                <path d="M8 7v10"></path>
+                <path d="M16 7v10"></path>
+              </svg>
+            </span>
+            <input type="text" id="cli-cupom-2" class="form-control" placeholder="EX: DESCONTO10">
+          </div>
+        </div>
+
         <button class="btn-primary" onclick="sendCheckout()">
           <svg viewBox="0 0 24 24" fill="none" stroke="#041308" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12l5 5L20 7"/>
@@ -1118,6 +1189,12 @@
       document.getElementById("step-dados").classList.add("hide");
       document.getElementById("step-pagamento").classList.add("hide");
       document.getElementById("cli-cpf").focus();
+
+      // NOVO: atualizar quantidade na caixinha
+      const qtdEl = document.getElementById("checkout-qtd");
+      if(qtdEl){
+        qtdEl.textContent = selected.length;
+      }
     }
     function closeCheckoutModal(){document.getElementById("checkout-modal").style.display = "none";}
     function backdropClose(ev){if(ev.target.id === "checkout-modal"){closeCheckoutModal();}}
@@ -1223,7 +1300,6 @@
       return {protocolo: protocolo};
     }
 
-    // mostra pagamento no modal (deixei aqui se você quiser voltar a usar)
     function showEfiPayment(data){
       document.getElementById("step-cpf").classList.add("hide");
       document.getElementById("step-dados").classList.add("hide");
@@ -1307,16 +1383,17 @@
       return await resp.json();
     }
 
-    // 🔁 NOVO: função central pra redirecionar
+    // central pra redirecionar
     function goToPaymentPage(protocolo){
-      // aqui você pode trocar pelo que quiser: /pagamento/, /pix/, etc.
       window.location.href = `/pedido/${protocolo}/`;
     }
 
     // CPF já existe
     async function checkCPF(){
       const cpfInput = document.getElementById("cli-cpf");
+      const cupomInput = document.getElementById("cli-cupom"); // NOVO
       const cpf = (cpfInput.value || "").trim();
+      const cupom = cupomInput ? (cupomInput.value || "").trim() : "";
       if(!cpf){
         alert("Informe o CPF.");
         cpfInput.focus();
@@ -1335,7 +1412,8 @@
           const pedido = await createPedidoOnBackend({
             slug: slug,
             cpf: cpf,
-            numeros: selected
+            numeros: selected,
+            cupom: cupom || null   // NOVO
           });
 
           if (pedido && pedido.protocolo){
@@ -1351,6 +1429,10 @@
           document.getElementById("cli-nome").focus();
           const dup = document.getElementById("cli-cpf-duplicado");
           if(dup){ dup.value = cpf; }
+
+          // se já digitou cupom na 1ª etapa, joga pra 2ª
+          const cup2 = document.getElementById("cli-cupom-2");
+          if(cup2 && cupom){ cup2.value = cupom; }
         }
       }catch(e){
         console.error(e);
@@ -1363,10 +1445,12 @@
       const nomeInput = document.getElementById("cli-nome");
       const telInput  = document.getElementById("cli-tel");
       const cpfInput  = document.getElementById("cli-cpf");
+      const cupom2    = document.getElementById("cli-cupom-2"); // NOVO
 
       const nome = toTitleCase((nomeInput.value || "").trim());
       const tel  = (telInput.value || "").trim();
       const cpf  = (cpfInput.value || "").trim();
+      const cupom = cupom2 ? (cupom2.value || "").trim() : "";
 
       if(!cpf){
         alert("CPF obrigatório.");
@@ -1389,10 +1473,10 @@
           cpf: cpf,
           nome: nome,
           telefone: tel,
-          numeros: selected
+          numeros: selected,
+          cupom: cupom || null   // NOVO
         });
 
-        // agora sempre que criar o pedido, manda pra página de pagamento
         if (pedido && pedido.protocolo){
           goToPaymentPage(pedido.protocolo);
           return;

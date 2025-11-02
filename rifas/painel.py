@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.db import models
 from django import forms
 from django.contrib import messages
+from django.db import connection
 from django.contrib.auth import (
     authenticate,
     get_user,
@@ -31,7 +32,27 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from .forms import LoginForm, RifaForm
-from .models import CotaPremiada, Numero, Pedido, Rifa, Empresa, RifaFinanceiro, RifaPremiacao
+from .models import (
+    CotaPremiada,
+    Numero,
+    Pedido,
+    Rifa,
+    Empresa,
+    RifaFinanceiro,
+    RifaPremiacao,
+    # 👇 novos
+    Coupon,
+    DiscountRule,
+    Affiliate,
+    AffiliateProgram,
+    AffiliateLink,
+    AffiliateClick,
+    Commission,
+    Payout,
+    Cliente,
+    EfiConfig,
+)
+
 
 
 # ================================================================
@@ -93,15 +114,21 @@ def logout_view(request: HttpRequest):
 
 
 @login_required(login_url="adminx_login")
-def dashboard_view(request: HttpRequest):
+def dashboard_view(request):
     guard = _staff_or_403(request)
     if guard:
         return guard
 
-    # só pra mostrar o nome e saber se já tem empresa
+    # ---------- EMPRESA (seguro mesmo sem tabela) ----------
     empresa = None
-    if request.user.is_authenticated:
+    efi = None
+    tables = connection.introspection.table_names()
+    if "rifas_empresa" in tables and request.user.is_authenticated:
         empresa = Empresa.objects.filter(created_by=request.user).first()
+        # 👇 se tiver empresa, tenta pegar a conta EFI dela
+        if empresa and "rifas_eficonfig" in tables:
+            efi = EfiConfig.objects.filter(empresa=empresa).first()
+    # -------------------------------------------------------
 
     hoje = timezone.localdate()
     tz = timezone.get_current_timezone()
@@ -109,32 +136,44 @@ def dashboard_view(request: HttpRequest):
     fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
 
     vendas_hoje = (
-        Pedido.objects.filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
+        Pedido.objects
+        .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
         .aggregate(qtd=Count("id"), total=Sum("total"))
     )
     vendas_mes = (
-        Pedido.objects.filter(
+        Pedido.objects
+        .filter(
             status=Pedido.PAGO,
             pago_em__year=hoje.year,
             pago_em__month=hoje.month,
-        ).aggregate(qtd=Count("id"), total=Sum("total"))
+        )
+        .aggregate(qtd=Count("id"), total=Sum("total"))
     )
-    numeros_status = {
-        r["status"]: r["qtd"]
-        for r in Numero.objects.values("status").annotate(qtd=Count("id"))
-    }
+
+    # pode acontecer de você rodar o painel antes de migrar Numero
+    try:
+        numeros_status = {
+            r["status"]: r["qtd"]
+            for r in Numero.objects.values("status").annotate(qtd=Count("id"))
+        }
+    except Exception:
+        numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+
     rifas_ativas = Rifa.objects.filter(ativo=True).count()
     pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
 
     ctx = {
-        "empresa": empresa,  # 👈 só pra exibir no botão
+        "empresa": empresa,
+        "efi": efi,  # 👈 AGORA o template enxerga
         "vendas_hoje": vendas_hoje,
         "vendas_mes": vendas_mes,
         "numeros_status": numeros_status,
         "rifas_ativas": rifas_ativas,
         "pendentes": pendentes,
         "ultimos_pedidos": (
-            Pedido.objects.select_related("cliente", "rifa").order_by("-criado_em")[:10]
+            Pedido.objects
+            .select_related("cliente", "rifa")
+            .order_by("-criado_em")[:10]
         ),
     }
     return render(request, "rifas/admin/dashboard.html", ctx)
@@ -1360,8 +1399,8 @@ def adminx_rifa_sorteio_json(request, rifa_id):
 
 @login_required(login_url="adminx_login")
 @require_POST
-def adminx_empresa_update_view(request: HttpRequest):
-    # precisa ser staff
+def adminx_empresa_update_view(request):
+    # precisa ser staff/admin do painel
     guard = _staff_or_403(request)
     if guard:
         return guard
@@ -1372,13 +1411,12 @@ def adminx_empresa_update_view(request: HttpRequest):
     if empresa_id:
         empresa = get_object_or_404(Empresa, pk=empresa_id)
 
-        # segurança: só pode editar se for o dono da empresa
-        # ou se for superuser (caso você tenha vários admins)
+        # segurança: só o dono ou superuser
         if empresa.created_by and empresa.created_by != user and not user.is_superuser:
             messages.error(request, "Você não tem permissão para editar esta empresa.")
             return redirect("adminx_dashboard")
     else:
-        # fallback: pega/cria a empresa do usuário logado
+        # fallback: cria/pega a empresa do usuário
         empresa, _ = Empresa.objects.get_or_create(
             created_by=user,
             defaults={
@@ -1387,11 +1425,28 @@ def adminx_empresa_update_view(request: HttpRequest):
             },
         )
 
-    # atualiza campos básicos
-    empresa.nome = request.POST.get("nome") or empresa.nome
+    # -------- campos básicos --------
+    empresa.nome = (request.POST.get("nome") or empresa.nome).strip()
     empresa.documento = (request.POST.get("documento") or "").strip()
     empresa.email = (request.POST.get("email") or "").strip()
     empresa.telefone = (request.POST.get("telefone") or "").strip()
+
+    # -------- novos campos que também existem no form grande --------
+    empresa.whatsapp_suporte = (request.POST.get("whatsapp_suporte") or "").strip()
+    empresa.whatsapp_grupo = (request.POST.get("whatsapp_grupo") or "").strip()
+
+    # taxas (se vierem no modal)
+    taxa_percent = request.POST.get("taxa_admin_percentual_padrao")
+    if taxa_percent is not None:
+        empresa.taxa_admin_percentual_padrao = taxa_percent or "0.00"
+
+    taxa_fixa = request.POST.get("taxa_admin_fixa_padrao")
+    if taxa_fixa is not None:
+        empresa.taxa_admin_fixa_padrao = taxa_fixa or "0.00"
+
+    # 👇 novos de domínio
+    empresa.dominio_publico = (request.POST.get("dominio_publico") or "").strip() or None
+    empresa.subdominio = (request.POST.get("subdominio") or "").strip() or None
 
     # logo (opcional)
     if "logo" in request.FILES and request.FILES["logo"]:
@@ -1589,3 +1644,735 @@ class RifaFinanceiroForm(forms.ModelForm):
             "taxa_admin_percentual": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
             "taxa_admin_fixa": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
         }
+
+def _to_decimal_or_none(value: str):
+    """
+    Converte strings como '0,00', '10,5', '1.234,56' pra Decimal.
+    Se vier vazio ou der erro, devolve None.
+    """
+    if value is None:
+        return None
+    value = value.strip()
+    if value == "":
+        return None
+    # remove separador de milhar e troca vírgula por ponto
+    # ex: "1.234,56" -> "1234.56"
+    value = value.replace(".", "").replace(",", ".")
+    try:
+        return Decimal(value)
+    except (InvalidOperation, ValueError):
+        return None
+
+
+@login_required(login_url="adminx_login")
+def empresa_form_view(request):
+    """
+    Tela completa de cadastro/edição da empresa.
+    1 empresa por usuário.
+    Também permite cadastrar/editar UMA EfiConfig ligada a essa empresa.
+    """
+    empresa = Empresa.objects.filter(created_by=request.user).first()
+
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        documento = request.POST.get("documento", "").strip()
+        email = request.POST.get("email", "").strip()
+        telefone = request.POST.get("telefone", "").strip()
+        whatsapp_suporte = request.POST.get("whatsapp_suporte", "").strip()
+        whatsapp_grupo = request.POST.get("whatsapp_grupo", "").strip()
+
+        # vêm como string ("0,00" / "10,5" / "")
+        taxa_admin_percentual_padrao_raw = request.POST.get("taxa_admin_percentual_padrao") or ""
+        taxa_admin_fixa_padrao_raw = request.POST.get("taxa_admin_fixa_padrao") or ""
+
+        # normaliza pra Decimal
+        taxa_admin_percentual_padrao = _to_decimal_or_none(taxa_admin_percentual_padrao_raw)
+        taxa_admin_fixa_padrao = _to_decimal_or_none(taxa_admin_fixa_padrao_raw)
+
+        # 👇 novos campos
+        dominio_publico = request.POST.get("dominio_publico", "").strip()
+        subdominio = request.POST.get("subdominio", "").strip()
+
+        if empresa:
+            emp = empresa
+        else:
+            emp = Empresa(created_by=request.user)
+
+        emp.nome = nome
+        emp.documento = documento
+        emp.email = email
+        emp.telefone = telefone
+        emp.whatsapp_suporte = whatsapp_suporte
+        emp.whatsapp_grupo = whatsapp_grupo
+        emp.dominio_publico = dominio_publico
+        emp.subdominio = subdominio
+
+        # ⚠️ aqui é onde dava o erro: agora só atribui se converteu
+        if taxa_admin_percentual_padrao is not None:
+            emp.taxa_admin_percentual_padrao = taxa_admin_percentual_padrao
+        else:
+            # se quiser permitir vazio, zera
+            emp.taxa_admin_percentual_padrao = Decimal("0.00")
+
+        if taxa_admin_fixa_padrao is not None:
+            emp.taxa_admin_fixa_padrao = taxa_admin_fixa_padrao
+        else:
+            emp.taxa_admin_fixa_padrao = Decimal("0.00")
+
+        # logo (opcional)
+        if request.FILES.get("logo"):
+            emp.logo = request.FILES["logo"]
+
+        # salva empresa primeiro
+        emp.save()
+
+        # ---------- bloco EFI ----------
+        efi_nome = request.POST.get("efi_nome", "").strip()
+        efi_client_id = request.POST.get("efi_client_id", "").strip()
+        efi_client_secret = request.POST.get("efi_client_secret", "").strip()
+        efi_chave_pix = request.POST.get("efi_chave_pix", "").strip()
+        efi_sandbox = request.POST.get("efi_sandbox") == "on"
+
+        # só cria/atualiza se o usuário preencheu algo da EFI
+        if efi_nome or efi_client_id or efi_chave_pix:
+            efi_obj = EfiConfig.objects.filter(empresa=emp).first()  # 1 por empresa
+            if not efi_obj:
+                efi_obj = EfiConfig(
+                    empresa=emp,
+                    nome=efi_nome or "Conta EFI",
+                )
+
+            efi_obj.nome = efi_nome or efi_obj.nome
+            efi_obj.client_id = efi_client_id
+            efi_obj.client_secret = efi_client_secret
+            efi_obj.chave_pix = efi_chave_pix
+            efi_obj.sandbox = efi_sandbox
+
+            # certificado opcional
+            if request.FILES.get("efi_certificate"):
+                efi_obj.certificate = request.FILES["efi_certificate"]
+
+            efi_obj.save()
+
+        messages.success(request, "Dados da empresa salvos com sucesso.")
+        # ⚠️ volta pra própria página
+        return redirect("adminx_empresa")
+
+    # GET
+    efi = None
+    if empresa:
+        efi = EfiConfig.objects.filter(empresa=empresa).first()
+
+    context = {
+        "empresa": empresa,
+        "efi": efi,
+    }
+    return render(request, "rifas/admin/empresa_form.html", context)
+
+
+def _gen_token() -> str:
+    return secrets.token_hex(6)
+
+
+# ============================================================
+# CUPONS
+# ============================================================
+def adminx_coupons_list(request):
+    coupons = Coupon.objects.select_related("rifa").order_by("-created_at")
+    return render(request, "rifas/admin/coupons_list.html", {
+        "coupons": coupons,
+    })
+
+
+def adminx_coupons_edit(request, pk=None):
+    if pk:
+        coupon = get_object_or_404(Coupon, pk=pk)
+    else:
+        coupon = None
+
+    if request.method == "POST":
+        data = request.POST
+        codigo = (data.get("codigo") or "").strip()
+        if not codigo:
+            messages.error(request, "Informe o código do cupom.")
+            return redirect(request.path)
+
+        rifa_id = data.get("rifa") or None
+        rifa = Rifa.objects.filter(pk=rifa_id).first() if rifa_id else None
+
+        attrs = {
+            "codigo": codigo,
+            "tipo": data.get("tipo") or Coupon.PERCENTUAL,
+            "valor": data.get("valor") or 0,
+            "max_uso_global": data.get("max_uso_global") or None,
+            "max_uso_por_cliente": data.get("max_uso_por_cliente") or None,
+            "min_compra": data.get("min_compra") or 0,
+            "qtd_min_numeros": data.get("qtd_min_numeros") or None,
+            "so_primeira_compra": bool(data.get("so_primeira_compra")),
+            "rifa": rifa,
+            "acumulavel": bool(data.get("acumulavel")),
+            "ativo": bool(data.get("ativo")),
+        }
+
+        if coupon is None:
+            Coupon.objects.create(**attrs)
+        else:
+            for k, v in attrs.items():
+                setattr(coupon, k, v)
+            coupon.save()
+
+        messages.success(request, "Cupom salvo.")
+        return redirect("adminx_coupons_list")
+
+    rifas = Rifa.objects.order_by("-created_at")
+    return render(request, "rifas/admin/coupons_form.html", {
+        "coupon": coupon,
+        "rifas": rifas,
+    })
+
+
+# ============================================================
+# REGRAS DE DESCONTO
+# ============================================================
+def adminx_discount_rules_list(request):
+    rules = DiscountRule.objects.select_related("rifa").order_by("-created_at")
+    return render(request, "rifas/admin/discount_rules_list.html", {
+        "rules": rules,
+    })
+
+
+def adminx_discount_rules_edit(request, pk=None):
+    if pk:
+        rule = get_object_or_404(DiscountRule, pk=pk)
+    else:
+        rule = None
+
+    if request.method == "POST":
+        data = request.POST
+        nome = (data.get("nome") or "").strip()
+        if not nome:
+            messages.error(request, "Informe o nome da regra.")
+            return redirect(request.path)
+
+        rifa_id = data.get("rifa") or None
+        rifa = Rifa.objects.filter(pk=rifa_id).first() if rifa_id else None
+
+        attrs = {
+            "nome": nome,
+            "rifa": rifa,
+            "qtd_numeros_min": data.get("qtd_numeros_min") or None,
+            "inicio": data.get("inicio") or None,
+            "fim": data.get("fim") or None,
+            "tipo": data.get("tipo") or DiscountRule.PERCENTUAL,
+            "valor": data.get("valor") or 0,
+            "prioridade": data.get("prioridade") or 0,
+            "exclusiva": bool(data.get("exclusiva")),
+            "ativo": bool(data.get("ativo")),
+        }
+
+        if rule is None:
+            DiscountRule.objects.create(**attrs)
+        else:
+            for k, v in attrs.items():
+                setattr(rule, k, v)
+            rule.save()
+
+        messages.success(request, "Regra de desconto salva.")
+        return redirect("adminx_discount_rules_list")
+
+    rifas = Rifa.objects.order_by("-created_at")
+    return render(request, "rifas/admin/discount_rules_form.html", {
+        "rule": rule,
+        "rifas": rifas,
+    })
+
+
+# ============================================================
+# AFILIADOS
+# ============================================================
+def adminx_affiliates_list(request):
+    affiliates = Affiliate.objects.order_by("-created_at")
+    return render(request, "rifas/admin/affiliates_list.html", {
+        "affiliates": affiliates,
+    })
+
+
+def adminx_affiliates_edit(request, pk=None):
+    if pk:
+        affiliate = get_object_or_404(Affiliate, pk=pk)
+    else:
+        affiliate = None
+
+    if request.method == "POST":
+        data = request.POST
+        nome = (data.get("nome") or "").strip()
+        email = (data.get("email") or "").strip()
+
+        if not nome or not email:
+            messages.error(request, "Nome e e-mail são obrigatórios.")
+            return redirect(request.path)
+
+        attrs = {
+            "nome": nome,
+            "email": email,
+            "telefone": data.get("telefone") or "",
+            "documento": data.get("documento") or "",
+            "status": data.get("status") or "ativo",
+            "pix_chave": data.get("pix_chave") or "",
+            "banco_agencia_conta": data.get("banco_agencia_conta") or "",
+        }
+
+        if affiliate is None:
+            Affiliate.objects.create(**attrs)
+        else:
+            for k, v in attrs.items():
+                setattr(affiliate, k, v)
+            affiliate.save()
+
+        messages.success(request, "Afiliado salvo.")
+        return redirect("adminx_affiliates_list")
+
+    return render(request, "rifas/admin/affiliates_form.html", {
+        "affiliate": affiliate,
+    })
+
+
+# ============================================================
+# PROGRAMAS DE AFILIAÇÃO
+# ============================================================
+def adminx_affiliate_programs_list(request):
+    programs = (
+        AffiliateProgram.objects
+        .select_related("rifa")
+        .order_by("-id")
+    )
+    return render(request, "rifas/admin/affiliate_programs_list.html", {
+        "programs": programs,
+    })
+
+
+def adminx_affiliate_programs_edit(request, pk=None):
+    if pk:
+        program = get_object_or_404(AffiliateProgram, pk=pk)
+    else:
+        program = None
+
+    if request.method == "POST":
+        data = request.POST
+        rifa_id = data.get("rifa") or None
+        rifa = Rifa.objects.filter(pk=rifa_id).first() if rifa_id else None
+
+        attrs = {
+            "rifa": rifa,
+            "modelo_comissao": data.get("modelo_comissao") or AffiliateProgram.PERC_VENDA,
+            "valor_comissao": data.get("valor_comissao") or 0,
+            "cookie_days": data.get("cookie_days") or 7,
+            "atribuicao": data.get("atribuicao") or "last_click",
+            "permitir_compra_propria": bool(data.get("permitir_compra_propria")),
+            "ativo": bool(data.get("ativo")),
+        }
+
+        if program is None:
+            AffiliateProgram.objects.create(**attrs)
+        else:
+            for k, v in attrs.items():
+                setattr(program, k, v)
+            program.save()
+
+        messages.success(request, "Programa de afiliação salvo.")
+        return redirect("adminx_affiliate_programs_list")
+
+    rifas = Rifa.objects.order_by("-created_at")
+    return render(request, "rifas/admin/affiliate_programs_form.html", {
+        "program": program,
+        "rifas": rifas,
+    })
+
+
+# ============================================================
+# LINKS DE AFILIADO
+# ============================================================
+def adminx_affiliate_links_list(request):
+    links = (
+        AffiliateLink.objects
+        .select_related("affiliate", "program", "program__rifa")
+        .order_by("-id")
+    )
+    return render(request, "rifas/admin/affiliate_links_list.html", {
+        "links": links,
+    })
+
+
+def adminx_affiliate_links_edit(request, pk=None):
+    if pk:
+        link = get_object_or_404(AffiliateLink, pk=pk)
+    else:
+        link = None
+
+    if request.method == "POST":
+        data = request.POST
+        aff_id = data.get("affiliate")
+        prog_id = data.get("program")
+
+        affiliate = get_object_or_404(Affiliate, pk=aff_id)
+        program = get_object_or_404(AffiliateProgram, pk=prog_id)
+
+        token = data.get("token") or _gen_token()
+        url_destino = data.get("url_destino") or ""
+
+        if link is None:
+            AffiliateLink.objects.create(
+                affiliate=affiliate,
+                program=program,
+                token=token,
+                url_destino=url_destino,
+            )
+        else:
+            link.affiliate = affiliate
+            link.program = program
+            link.token = token
+            link.url_destino = url_destino
+            link.save()
+
+        messages.success(request, "Link de afiliado salvo.")
+        return redirect("adminx_affiliate_links_list")
+
+    affiliates = Affiliate.objects.order_by("nome")
+    programs = AffiliateProgram.objects.order_by("-id")
+    return render(request, "rifas/admin/affiliate_links_form.html", {
+        "link": link,
+        "affiliates": affiliates,
+        "programs": programs,
+    })
+
+
+# ============================================================
+# CLIQUES
+# ============================================================
+def adminx_affiliate_clicks_list(request):
+    clicks = (
+        AffiliateClick.objects
+        .select_related("link", "link__affiliate", "link__program", "link__program__rifa")
+        .order_by("-clicked_at")[:200]
+    )
+    return render(request, "rifas/admin/affiliate_clicks_list.html", {
+        "clicks": clicks,
+    })
+
+
+# ============================================================
+# COMISSÕES
+# ============================================================
+def adminx_commissions_list(request):
+    commissions = (
+        Commission.objects
+        .select_related("affiliate", "pedido", "pedido__rifa")
+        .order_by("-criado_em")
+    )
+    return render(request, "rifas/admin/commissions_list.html", {
+        "commissions": commissions,
+    })
+
+
+def adminx_commission_approve(request, pk):
+    com = get_object_or_404(Commission, pk=pk)
+    com.status = Commission.APROVADA
+    com.motivo_negacao = ""
+    com.save(update_fields=["status", "motivo_negacao"])
+    messages.success(request, "Comissão aprovada.")
+    return redirect("adminx_commissions_list")
+
+
+def adminx_commission_pay(request, pk):
+    com = get_object_or_404(Commission, pk=pk)
+    com.status = Commission.PAGA
+    com.save(update_fields=["status"])
+    messages.success(request, "Comissão marcada como paga.")
+    return redirect("adminx_commissions_list")
+
+
+# ============================================================
+# PAYOUTS
+# ============================================================
+def adminx_payouts_list(request):
+    payouts = (
+        Payout.objects
+        .select_related("affiliate")
+        .order_by("-criado_em")
+    )
+    return render(request, "rifas/admin/payouts_list.html", {
+        "payouts": payouts,
+    })
+
+
+def adminx_payouts_edit(request, pk=None):
+    if pk:
+        payout = get_object_or_404(Payout, pk=pk)
+    else:
+        payout = None
+
+    if request.method == "POST":
+        data = request.POST
+        aff_id = data.get("affiliate")
+        affiliate = get_object_or_404(Affiliate, pk=aff_id)
+
+        valor_total = data.get("valor_total") or 0
+        status = data.get("status") or Payout.EM_PROC
+        comprovante_url = data.get("comprovante_url") or ""
+
+        if payout is None:
+            payout = Payout.objects.create(
+                affiliate=affiliate,
+                valor_total=valor_total,
+                status=status,
+                comprovante_url=comprovante_url,
+                pago_em=timezone.now() if status == Payout.PAGO else None,
+            )
+        else:
+            payout.affiliate = affiliate
+            payout.valor_total = valor_total
+            payout.status = status
+            payout.comprovante_url = comprovante_url
+            payout.pago_em = timezone.now() if status == Payout.PAGO else None
+            payout.save()
+
+        messages.success(request, "Payout salvo.")
+        return redirect("adminx_payouts_list")
+
+    affiliates = Affiliate.objects.order_by("nome")
+    return render(request, "rifas/admin/payouts_form.html", {
+        "payout": payout,
+        "affiliates": affiliates,
+    })
+
+@user_passes_test(_is_staff, login_url="adminx_login")
+def financeiro_geral_view(request: HttpRequest):
+    """
+    Painel financeiro geral do sistema.
+    - Vendas por rifa (só pedidos PAGO)
+    - Resumo vindo do RifaFinanceiro (custos, taxas, premiações)
+    - Comissões de afiliados
+    - Payouts já pagos
+    """
+    # filtros
+    dt_ini = request.GET.get("ini", "").strip()
+    dt_fim = request.GET.get("fim", "").strip()
+
+    filtros_pedido = Q(status=Pedido.PAGO)
+    if dt_ini:
+        try:
+            ini = datetime.strptime(dt_ini, "%Y-%m-%d")
+            ini = timezone.make_aware(datetime.combine(ini, datetime.min.time()))
+            filtros_pedido &= Q(pago_em__gte=ini)
+        except Exception:
+            pass
+    if dt_fim:
+        try:
+            fim = datetime.strptime(dt_fim, "%Y-%m-%d")
+            fim = timezone.make_aware(datetime.combine(fim, datetime.max.time()))
+            filtros_pedido &= Q(pago_em__lte=fim)
+        except Exception:
+            pass
+
+    rifas = Rifa.objects.order_by("-created_at")
+
+    total_bruto_geral = Decimal("0.00")
+    total_taxas_geral = Decimal("0.00")
+    total_custos_geral = Decimal("0.00")
+    total_premiacoes_geral = Decimal("0.00")
+    total_liquido_geral = Decimal("0.00")
+
+    rifas_rows = []
+
+    for r in rifas:
+        # 1) total vendido dessa rifa (pedidos pagos)
+        pedidos_rifa = (
+            Pedido.objects
+            .filter(filtros_pedido, rifa=r)
+            .select_related("cliente")
+        )
+        total_vendido = pedidos_rifa.aggregate(t=Sum("total"))["t"] or Decimal("0.00")
+
+        # 2) pega financeiro 1:1 (se existir)
+        financeiro = RifaFinanceiro.objects.filter(rifa=r).first()
+        resumo = None
+        taxa_total = Decimal("0.00")
+        custo_premio = Decimal("0.00")
+        outras_desp = Decimal("0.00")
+        liquido = None
+
+        if financeiro:
+            resumo = financeiro.calcular_resumo()
+            # o método já deve te dar: total_vendido, valor_taxa_percentual, valor_taxa_fixa, lucro_liquido, etc.
+            taxa_total = (resumo.get("valor_taxa_percentual") or Decimal("0")) + (
+                resumo.get("valor_taxa_fixa") or Decimal("0")
+            )
+            custo_premio = financeiro.custo_premio or Decimal("0")
+            outras_desp = financeiro.outras_despesas or Decimal("0")
+            liquido = resumo.get("lucro_liquido")
+
+        # 3) premiações dessa rifa (tabela RifaPremiacao)
+        premiacoes = RifaPremiacao.objects.filter(rifa=r)
+        total_premiacoes_rifa = (
+            premiacoes.aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+        )
+
+        # acumula no geral
+        total_bruto_geral += total_vendido
+        total_taxas_geral += taxa_total
+        total_custos_geral += (custo_premio + outras_desp)
+        total_premiacoes_geral += total_premiacoes_rifa
+
+        # se não veio lucro_liquido do modelo, calcula um básico
+        if liquido is None:
+            liquido = total_vendido - taxa_total - custo_premio - outras_desp - total_premiacoes_rifa
+
+        total_liquido_geral += liquido
+
+        rifas_rows.append({
+            "rifa": r,
+            "total_vendido": total_vendido,
+            "taxas": taxa_total,
+            "custo_premio": custo_premio,
+            "outras_despesas": outras_desp,
+            "premiacoes": total_premiacoes_rifa,
+            "liquido": liquido,
+        })
+
+    # ================================
+    # AFILIAÇÃO (geral)
+    # ================================
+    # comissões geradas
+    commissions_qs = Commission.objects.all()
+    payouts_qs = Payout.objects.all()
+
+    if dt_ini:
+        commissions_qs = commissions_qs.filter(criado_em__date__gte=dt_ini)
+        payouts_qs = payouts_qs.filter(criado_em__date__gte=dt_ini)
+    if dt_fim:
+        commissions_qs = commissions_qs.filter(criado_em__date__lte=dt_fim)
+        payouts_qs = payouts_qs.filter(criado_em__date__lte=dt_fim)
+
+    total_comissoes_geradas = commissions_qs.aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+    total_comissoes_aprovadas = commissions_qs.filter(
+        status=Commission.APROVADA
+    ).aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+    total_comissoes_pagas = commissions_qs.filter(
+        status=Commission.PAGA
+    ).aggregate(t=Sum("valor"))["t"] or Decimal("0.00")
+
+    total_payouts = payouts_qs.filter(
+        Q(status="pago") | Q(status=Payout.PAGO)
+    ).aggregate(t=Sum("valor_total"))["t"] or Decimal("0.00")
+
+    # saldo a pagar = comissões pagas - payouts efetivamente pagos
+    saldo_afiliados = total_comissoes_pagas - total_payouts
+
+    ctx = {
+        "rifas_rows": rifas_rows,
+        "total_bruto_geral": total_bruto_geral,
+        "total_taxas_geral": total_taxas_geral,
+        "total_custos_geral": total_custos_geral,
+        "total_premiacoes_geral": total_premiacoes_geral,
+        "total_liquido_geral": total_liquido_geral,
+
+        # afiliados
+        "total_comissoes_geradas": total_comissoes_geradas,
+        "total_comissoes_aprovadas": total_comissoes_aprovadas,
+        "total_comissoes_pagas": total_comissoes_pagas,
+        "total_payouts": total_payouts,
+        "saldo_afiliados": saldo_afiliados,
+
+        # filtros
+        "dt_ini": dt_ini,
+        "dt_fim": dt_fim,
+    }
+    return render(request, "rifas/admin/financeiro_geral.html", ctx)
+
+def _staff_or_403(request):
+    if not request.user.is_authenticated:
+        # deixa o @login_required cuidar
+        return None
+    if not request.user.is_staff:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Você não tem permissão para acessar este painel.")
+    return None
+
+
+@require_POST
+@login_required(login_url="adminx_login")
+def registrar_webhook_efi_view(request, pk):
+    """
+    Registra o webhook na Efí para uma EfiConfig específica.
+    Usa o método config.register_webhook().
+    Mostra mensagem de sucesso/erro e VOLTA pra tela de empresa,
+    que é onde está o modal.
+    """
+    # garante que é staff/adminx
+    guard = _staff_or_403(request)
+    if guard:
+        return guard
+
+    # pega só config ativa
+    config = get_object_or_404(EfiConfig, pk=pk, ativo=True)
+
+    try:
+        resp = config.register_webhook()
+    except Exception as e:
+        # erro de rede / SSL / conexão
+        messages.error(
+            request,
+            f"Erro ao registrar webhook na Efí: {e}"
+        )
+        # volta pra EMPRESA (onde está o modal)
+        return redirect("adminx_empresa")
+
+    # Normalizar resposta
+    status_code = None
+    text = ""
+    webhook_url = None
+    ok_flag = None
+
+    # 1) se o método já devolve dict (como no teu management command)
+    if isinstance(resp, dict):
+        status_code = resp.get("status_code")
+        # pega mais texto pra mostrar no modal
+        text = (resp.get("text") or "")[:800]
+        webhook_url = resp.get("webhook")
+        ok_flag = resp.get("ok")
+    else:
+        # 2) pode ser um objeto Response do requests
+        try:
+            import requests  # noqa
+            if isinstance(resp, requests.Response):
+                status_code = resp.status_code
+                try:
+                    text = resp.text[:800]
+                except Exception:
+                    text = ""
+                # tenta pegar json
+                try:
+                    data = resp.json()
+                    webhook_url = data.get("webhook") or data.get("url")
+                except Exception:
+                    pass
+        except ImportError:
+            # sem requests instalado
+            text = str(resp)[:800]
+
+    # Decidir se deu certo
+    if ok_flag is True or (status_code and 200 <= status_code < 300):
+        msg = "Webhook registrado na Efí com sucesso."
+        if webhook_url:
+            msg += f" URL: {webhook_url}"
+        messages.success(request, msg)
+    else:
+        err = "Falha ao registrar webhook na Efí."
+        if status_code:
+            err += f" Status: {status_code}."
+        if text:
+            err += f" Detalhe: {text}"
+        messages.error(request, err)
+
+    # 👇 sempre volta pra tela da empresa (onde está o modal)
+    return redirect("adminx_empresa")

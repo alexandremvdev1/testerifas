@@ -1,0 +1,80 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Comissões de afiliado{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="fa-solid fa-sack-dollar me-2"></i>Comissões de afiliado</h4>
+
+<div class="panel">
+  <div class="panel-h">
+    <div class="title-sm">Comissões geradas</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Afiliado</th>
+            <th>Pedido</th>
+            <th>Rifa</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for com in commissions %}
+          <tr>
+            <td>{{ com.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{{ com.affiliate.nome }}</td>
+            <td>
+              {% if com.pedido %}
+                {{ com.pedido.protocolo }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if com.pedido and com.pedido.rifa %}
+                {{ com.pedido.rifa.titulo }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>R$ {{ com.valor }}</td>
+            <td>
+              {% if com.status == "pendente" %}
+                <span class="badge bg-warning text-dark rounded-pill">pendente</span>
+              {% elif com.status == "aprovada" %}
+                <span class="badge bg-info rounded-pill">aprovada</span>
+              {% elif com.status == "paga" %}
+                <span class="badge bg-success rounded-pill">paga</span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill">{{ com.status }}</span>
+              {% endif %}
+              {% if com.motivo_negacao %}
+                <small class="text-danger d-block">{{ com.motivo_negacao }}</small>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if com.status == "pendente" %}
+                <a href="{% url 'adminx_commission_approve' com.id %}" class="btn btn-sm btn-success">
+                  <i class="fa-solid fa-check"></i>
+                </a>
+              {% endif %}
+              {% if com.status == "aprovada" %}
+                <a href="{% url 'adminx_commission_pay' com.id %}" class="btn btn-sm btn-primary">
+                  <i class="fa-solid fa-money-bill"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-secondary">Nenhuma comissão ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

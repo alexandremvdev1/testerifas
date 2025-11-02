@@ -1,0 +1,538 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if empresa %}Editar empresa{% else %}Cadastrar empresa{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  {# COLUNA PRINCIPAL #}
+  <div class="col-12 col-lg-8 col-xxl-9">
+    <div class="panel">
+      <div class="panel-h d-flex align-items-center gap-2">
+        <div class="title-sm">
+          <i class="fa-regular fa-building me-1"></i>
+          {% if empresa %}Editar empresa{% else %}Cadastrar empresa{% endif %}
+        </div>
+        {% if empresa %}
+          <span class="badge bg-success bg-opacity-50">empresa ativa</span>
+        {% else %}
+          <span class="badge bg-warning text-dark bg-opacity-75">nenhuma empresa cadastrada</span>
+        {% endif %}
+      </div>
+      <div class="panel-c">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Nome / Razão social</label>
+            <input type="text"
+                   name="nome"
+                   value="{{ empresa.nome|default:request.user.get_full_name|default:request.user.username }}"
+                   class="form-control form-control-dark"
+                   required>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">CPF / CNPJ</label>
+              <input type="text"
+                     name="documento"
+                     value="{% if empresa %}{{ empresa.documento }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="000.000.000-00 ou 00.000.000/0000-00">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Telefone</label>
+              <input type="text"
+                     name="telefone"
+                     value="{% if empresa %}{{ empresa.telefone }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="(63) 9 0000-0000">
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label">E-mail</label>
+              <input type="email"
+                     name="email"
+                     value="{% if empresa %}{{ empresa.email }}{% else %}{{ request.user.email }}{% endif %}"
+                     class="form-control form-control-dark">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Logo</label>
+              <input type="file" name="logo" accept="image/*" class="form-control form-control-dark">
+              {% if empresa and empresa.logo %}
+                <div class="mt-1 small text-secondary">Logo atual:</div>
+                <img src="{{ empresa.logo.url }}" alt="Logo" style="max-height:44px;border-radius:.5rem;">
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3 text-secondary">
+
+          {# DOMÍNIO / SUBDOMÍNIO #}
+          <div class="row g-3">
+            <div class="col-md-7">
+              <label class="form-label">Domínio público / URL base</label>
+              <input type="url"
+                     name="dominio_publico"
+                     value="{% if empresa %}{{ empresa.dominio_publico }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="https://rifas.seucliente.com.br">
+              <div class="small text-secondary mt-1">
+                Usado para montar o webhook da Efí e links públicos.
+              </div>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Subdomínio (opcional)</label>
+              <input type="text"
+                     name="subdominio"
+                     value="{% if empresa %}{{ empresa.subdominio }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="cliente01">
+              <div class="small text-secondary mt-1">
+                O sistema pode montar <code>cliente01.seudominio.com</code>.
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label">WhatsApp de suporte</label>
+              <input type="url"
+                     name="whatsapp_suporte"
+                     value="{% if empresa %}{{ empresa.whatsapp_suporte }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="https://wa.me/5563...">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">WhatsApp do grupo</label>
+              <input type="url"
+                     name="whatsapp_grupo"
+                     value="{% if empresa %}{{ empresa.whatsapp_grupo }}{% endif %}"
+                     class="form-control form-control-dark"
+                     placeholder="https://chat.whatsapp.com/...">
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="form-label">Taxa administrativa padrão (%)</label>
+              <input type="number"
+                     step="0.01"
+                     name="taxa_admin_percentual_padrao"
+                     value="{% if empresa %}{{ empresa.taxa_admin_percentual_padrao }}{% else %}0.00{% endif %}"
+                     class="form-control form-control-dark">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Taxa fixa padrão (R$)</label>
+              <input type="number"
+                     step="0.01"
+                     name="taxa_admin_fixa_padrao"
+                     value="{% if empresa %}{{ empresa.taxa_admin_fixa_padrao }}{% else %}0.00{% endif %}"
+                     class="form-control form-control-dark">
+            </div>
+          </div>
+
+          <div class="mt-4 d-flex gap-2">
+            <a href="{% url 'adminx_dashboard' %}" class="btn btn-sm btn-secondary">Voltar</a>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fa-solid fa-floppy-disk me-1"></i> Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# ---------- bloco EFI ---------- #}
+    <div class="panel mt-3">
+      <div class="panel-h d-flex align-items-center gap-2">
+        <div class="title-sm">
+          <i class="fa-solid fa-plug me-1"></i> Configuração EFI (Pix)
+        </div>
+        {% if efi %}
+          <span class="badge bg-success bg-opacity-75">configurada</span>
+        {% else %}
+          <span class="badge bg-secondary bg-opacity-50">nenhuma conta EFI</span>
+        {% endif %}
+      </div>
+      <div class="panel-c">
+        <p class="text-secondary small mb-3">
+          Preencha para que esta empresa consiga gerar cobranças Pix pela Efí/Gerencianet.
+        </p>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if empresa %}
+            <input type="hidden" name="nome" value="{{ empresa.nome }}">
+            <input type="hidden" name="documento" value="{{ empresa.documento }}">
+            <input type="hidden" name="email" value="{{ empresa.email }}">
+            <input type="hidden" name="telefone" value="{{ empresa.telefone }}">
+            <input type="hidden" name="whatsapp_suporte" value="{{ empresa.whatsapp_suporte }}">
+            <input type="hidden" name="whatsapp_grupo" value="{{ empresa.whatsapp_grupo }}">
+            <input type="hidden" name="taxa_admin_percentual_padrao" value="{{ empresa.taxa_admin_percentual_padrao }}">
+            <input type="hidden" name="taxa_admin_fixa_padrao" value="{{ empresa.taxa_admin_fixa_padrao }}">
+            <input type="hidden" name="dominio_publico" value="{{ empresa.dominio_publico }}">
+            <input type="hidden" name="subdominio" value="{{ empresa.subdominio }}">
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label">Nome interno da conta</label>
+            <input type="text"
+                   name="efi_nome"
+                   value="{% if efi %}{{ efi.nome }}{% else %}Conta EFI principal{% endif %}"
+                   class="form-control form-control-dark">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Client ID</label>
+            <input type="text"
+                   name="efi_client_id"
+                   value="{% if efi %}{{ efi.client_id }}{% endif %}"
+                   class="form-control form-control-dark">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Client Secret</label>
+            <input type="text"
+                   name="efi_client_secret"
+                   value="{% if efi %}{{ efi.client_secret }}{% endif %}"
+                   class="form-control form-control-dark">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Chave Pix</label>
+            <input type="text"
+                   name="efi_chave_pix"
+                   value="{% if efi %}{{ efi.chave_pix }}{% endif %}"
+                   class="form-control form-control-dark">
+          </div>
+
+          {# modo 1: 1 arquivo só #}
+          <div class="mb-3">
+            <label class="form-label">Certificado único (.pem / .p12)</label>
+            <input type="file" name="efi_certificate" class="form-control form-control-dark">
+            {% if efi and efi.certificate %}
+              <div class="small text-secondary mt-1">Já há um certificado enviado (modo 1 arquivo).</div>
+            {% endif %}
+          </div>
+
+          {# modo 2: 2 arquivos separados #}
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">CERT (.pem)</label>
+              <input type="file" name="efi_certificate_cert" class="form-control form-control-dark">
+              {% if efi and efi.certificate_cert %}
+                <div class="small text-secondary mt-1">CERT já enviado.</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">KEY (.key/.pem)</label>
+              <input type="file" name="efi_certificate_key" class="form-control form-control-dark">
+              {% if efi and efi.certificate_key %}
+                <div class="small text-secondary mt-1">KEY já enviada.</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="efi_sandbox" id="efiSandbox"
+                   {% if not efi or efi.sandbox %}checked{% endif %}>
+            <label class="form-check-label small" for="efiSandbox">
+              Usar ambiente de testes (sandbox)
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="fa-solid fa-floppy-disk me-1"></i> Salvar EFI
+          </button>
+        </form>
+
+        {% if efi %}
+          <form method="post"
+                action="{% url 'adminx_registrar_webhook_efi' efi.id %}"
+                class="mt-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-light w-100">
+              <i class="fa-solid fa-plug-circle-bolt me-1"></i>
+              Registrar webhook na Efí
+            </button>
+            {% if efi.webhook_url_registrado %}
+              <div class="text-secondary small mt-1">
+                Último registrado: {{ efi.webhook_url_registrado }}
+              </div>
+            {% endif %}
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# COLUNA LATERAL #}
+  <div class="col-12 col-lg-4 col-xxl-3">
+    <div class="panel">
+      <div class="panel-h">
+        <div class="title-sm"><i class="fa-regular fa-id-card me-1"></i>Resumo da empresa</div>
+      </div>
+      <div class="panel-c">
+        <div class="d-flex gap-3 align-items-center mb-3">
+          <div style="width:56px;height:56px;border-radius:.85rem;background:rgba(15,23,42,.25);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            {% if empresa and empresa.logo %}
+              <img src="{{ empresa.logo.url }}" alt="{{ empresa.nome }}" style="width:100%;height:100%;object-fit:cover;">
+            {% elif empresa %}
+              <span class="fw-semibold text-light">{{ empresa.nome|slice:":2"|upper }}</span>
+            {% else %}
+              <i class="fa-regular fa-building text-secondary fs-4"></i>
+            {% endif %}
+          </div>
+          <div>
+            <div class="fw-semibold small">
+              {% if empresa %}{{ empresa.nome }}{% else %}Sem empresa cadastrada{% endif %}
+            </div>
+            <div class="text-secondary small">
+              {% if empresa and empresa.documento %}{{ empresa.documento }}{% else %}—{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-2 small">
+          <span class="text-secondary">Suporte:</span><br>
+          {% if empresa and empresa.whatsapp_suporte %}
+            <a href="{{ empresa.whatsapp_suporte }}" target="_blank" class="link-light">{{ empresa.whatsapp_suporte }}</a>
+          {% else %}
+            <span class="text-secondary">não informado</span>
+          {% endif %}
+        </div>
+        <div class="mb-2 small">
+          <span class="text-secondary">Grupo:</span><br>
+          {% if empresa and empresa.whatsapp_grupo %}
+            <a href="{{ empresa.whatsapp_grupo }}" target="_blank" class="link-light">{{ empresa.whatsapp_grupo }}</a>
+          {% else %}
+            <span class="text-secondary">não informado</span>
+          {% endif %}
+        </div>
+        <div class="mb-2 small">
+          <span class="text-secondary">Domínio:</span><br>
+          {% if empresa and empresa.dominio_publico %}
+            <span class="text-light small">{{ empresa.dominio_publico }}</span>
+          {% else %}
+            <span class="text-secondary small">não informado</span>
+          {% endif %}
+        </div>
+        <div class="mb-2 small">
+          <span class="text-secondary">Subdomínio:</span><br>
+          {% if empresa and empresa.subdominio %}
+            <span class="text-light small">{{ empresa.subdominio }}</span>
+          {% else %}
+            <span class="text-secondary small">não informado</span>
+          {% endif %}
+        </div>
+        <div class="mb-2 small">
+          <span class="text-secondary">Taxas padrão:</span><br>
+          {% if empresa %}
+            {{ empresa.taxa_admin_percentual_padrao|default:"0.00" }}% + R$ {{ empresa.taxa_admin_fixa_padrao|default:"0.00" }}
+          {% else %}
+            0% + R$ 0,00
+          {% endif %}
+        </div>
+
+        <hr class="text-secondary">
+
+        <a href="{% url 'adminx_dashboard' %}" class="btn btn-sm btn-outline-light w-100">
+          <i class="fa-solid fa-arrow-left me-1"></i> Voltar para o painel
+        </a>
+      </div>
+    </div>
+
+    <div class="panel mt-3">
+      <div class="panel-h">
+        <div class="title-sm"><i class="fa-solid fa-circle-info me-1"></i>Dica</div>
+      </div>
+      <div class="panel-c small text-secondary">
+        A logo só aparece no painel se:
+        <ol class="small ps-3">
+          <li>`MEDIA_URL` e `MEDIA_ROOT` estão configurados no <code>settings.py</code>;</li>
+          <li>e as <code>urls.py</code> estão servindo media em <code>DEBUG=True</code>.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ========================== MODAL DE MENSAGENS ========================== #}
+<div id="msgModal" class="modal-backdrop-msg" style="display:none;">
+  <div class="modal-msg-box">
+    <div class="modal-msg-header">
+      <span id="msgModalTitle">Mensagem</span>
+      <button type="button" class="btn-close-msg" onclick="closeMsgModal()">×</button>
+    </div>
+    <div class="modal-msg-body" id="msgModalBody"></div>
+    <div class="modal-msg-footer">
+      <button type="button" class="btn btn-sm btn-light" onclick="closeMsgModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{# 1) TENTA rodar pelo bloco padrão #}
+{% block extra_js %}
+<script>
+  function __renderDjangoMessages(){
+    const msgs = [
+      {% if messages %}
+        {% for m in messages %}
+          {
+            level: "{{ m.tags }}",
+            text: `{{ m|escapejs }}`
+          }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      {% endif %}
+    ];
+    if (!msgs.length) return;
+
+    const wrap = document.getElementById("msgModal");
+    const body = document.getElementById("msgModalBody");
+    const title = document.getElementById("msgModalTitle");
+    body.innerHTML = "";
+    let isError = false;
+
+    msgs.forEach(function(m){
+      const tech = m.text.indexOf("Erro") !== -1 ||
+                   m.text.indexOf("SSL") !== -1 ||
+                   m.text.indexOf("Connection aborted") !== -1 ||
+                   m.text.indexOf("RemoteDisconnected") !== -1 ||
+                   m.text.indexOf("https://") !== -1;
+
+      const box = document.createElement(tech ? "pre" : "div");
+      box.className = "msg-line";
+      box.textContent = m.text;
+      body.appendChild(box);
+
+      if (m.level && m.level.indexOf("error") !== -1){
+        isError = true;
+      }
+    });
+
+    if (isError){
+      title.textContent = "Erro ao registrar webhook na Efí";
+      wrap.classList.add("error");
+    } else {
+      title.textContent = "Tudo certo!";
+      wrap.classList.remove("error");
+    }
+
+    wrap.style.display = "flex";
+  }
+
+  function closeMsgModal(){
+    const m = document.getElementById("msgModal");
+    if(m){ m.style.display = "none"; }
+  }
+
+  // roda normal
+  document.addEventListener("DOMContentLoaded", __renderDjangoMessages);
+
+  // se estiver usando HTMX e a página foi trocada
+  document.addEventListener("htmx:afterSwap", __renderDjangoMessages);
+</script>
+<style>
+  .modal-backdrop-msg{
+    position:fixed;
+    inset:0;
+    background:rgba(15,23,42,.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    padding:1.5rem;
+  }
+  .modal-msg-box{
+    background:#0f172a;
+    border:1px solid rgba(148,163,184,.2);
+    border-radius:1rem;
+    width:100%;
+    max-width:780px;
+    box-shadow:0 20px 55px rgba(0,0,0,.35);
+    display:flex;
+    flex-direction:column;
+    max-height:90vh;
+  }
+  .modal-msg-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:.9rem 1rem .4rem;
+    border-bottom:1px solid rgba(148,163,184,.12);
+    font-weight:600;
+    color:#fff;
+  }
+  .modal-backdrop-msg.error .modal-msg-header{
+    background:rgba(248,113,113,.12);
+    border-color:rgba(248,113,113,.35);
+  }
+  .btn-close-msg{
+    background:transparent;
+    border:none;
+    color:#fff;
+    font-size:1.25rem;
+    line-height:1;
+    cursor:pointer;
+  }
+  .modal-msg-body{
+    padding:.75rem 1rem 1rem;
+    overflow:auto;
+    color:#e2e8f0;
+    font-size:.82rem;
+  }
+  .modal-msg-footer{
+    padding:.5rem 1rem 1rem;
+    text-align:right;
+  }
+  .msg-line{
+    background:rgba(15,23,42,.35);
+    border:1px solid rgba(148,163,184,.08);
+    border-radius:.6rem;
+    padding:.5rem .7rem .4rem;
+    margin-bottom:.45rem;
+    word-break:break-word;
+    white-space:pre-wrap;
+  }
+  pre.msg-line{
+    font-family:ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+</style>
+{% endblock %}
+
+{# 2) FALLBACK — se o base NÃO renderizar o bloco, ainda assim o JS entra #}
+<script>
+  if (typeof __renderDjangoMessages === "function") {
+    // já foi definido lá em cima
+  } else {
+    (function(){
+      const msgs = [
+        {% if messages %}
+          {% for m in messages %}
+            {
+              level: "{{ m.tags }}",
+              text: `{{ m|escapejs }}`
+            }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        {% endif %}
+      ];
+      if (!msgs.length) return;
+      const wrap = document.getElementById("msgModal");
+      const body = document.getElementById("msgModalBody");
+      const title = document.getElementById("msgModalTitle");
+      body.innerHTML = "";
+      let isError = false;
+      msgs.forEach(function(m){
+        const box = document.createElement("pre");
+        box.className = "msg-line";
+        box.textContent = m.text;
+        body.appendChild(box);
+        if (m.level && m.level.indexOf("error") !== -1){
+          isError = true;
+        }
+      });
+      if (isError){
+        title.textContent = "Erro ao registrar webhook na Efí";
+        wrap.classList.add("error");
+      }
+      wrap.style.display = "flex";
+    })();
+  }
+</script>

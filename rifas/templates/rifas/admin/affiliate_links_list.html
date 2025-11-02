@@ -1,0 +1,61 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Links de afiliado{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="fa-solid fa-link me-2"></i>Links de afiliado</h4>
+  <a href="{% url 'adminx_affiliate_links_new' %}" class="btn btn-sm btn-primary">
+    <i class="fa-solid fa-plus me-1"></i>Novo link
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-h">
+    <div class="title-sm">Links</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Afiliado</th>
+            <th>Programa / Rifa</th>
+            <th>Token</th>
+            <th>Destino</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in links %}
+          <tr>
+            <td>{{ l.affiliate.nome }}</td>
+            <td>
+              {% if l.program.rifa %}
+                {{ l.program.rifa.titulo }}
+              {% else %}
+                {{ l.program.id }}
+              {% endif %}
+            </td>
+            <td><code>{{ l.token }}</code></td>
+            <td>
+              {% if l.url_destino %}
+                <small class="text-secondary">{{ l.url_destino }}</small>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'adminx_affiliate_links_edit' l.id %}" class="btn btn-sm btn-outline-light">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-secondary">Nenhum link ainda.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

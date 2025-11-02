@@ -1,0 +1,165 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Financeiro geral{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-cash-register me-2"></i>Financeiro geral
+  </h4>
+  <a href="{% url 'adminx_export_pedidos_csv' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-file-csv me-1"></i> Exportar pedidos
+  </a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <label class="form-label mb-0 small">De</label>
+    <input type="date" name="ini" value="{{ dt_ini }}" class="form-control form-control-sm">
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-0 small">Até</label>
+    <input type="date" name="fim" value="{{ dt_fim }}" class="form-control form-control-sm">
+  </div>
+  <div class="col-auto align-self-end">
+    <button class="btn btn-sm btn-primary">
+      <i class="fa-solid fa-magnifying-glass me-1"></i>Filtrar
+    </button>
+  </div>
+</form>
+
+{# ==== KPIs gerais ==== #}
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-coins text-warning"></i> Vendas brutas</div>
+      <div class="kpi-v">R$ {{ total_bruto_geral }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">Total de pedidos pagos no período</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-percent text-info"></i> Taxas / custos</div>
+      <div class="kpi-v">R$ {{ total_taxas_geral|add:total_custos_geral }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">Taxas + custos cadastrados</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-trophy text-success"></i> Premiações</div>
+      <div class="kpi-v">R$ {{ total_premiacoes_geral }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">Cotas premiadas / top / demais</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="kpi-box">
+      <div class="kpi-h"><i class="fa-solid fa-sack-dollar text-success"></i> Líquido</div>
+      <div class="kpi-v">R$ {{ total_liquido_geral }}</div>
+      <div class="text-secondary" style="font-size:.7rem;">Estimativa após tudo</div>
+    </div>
+  </div>
+</div>
+
+{# ==== Tabela por rifa ==== #}
+<div class="panel mb-3">
+  <div class="panel-h">
+    <div class="title-sm"><i class="fa-solid fa-ticket me-2"></i>Rifas / Ações</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Rifa</th>
+            <th class="text-end">Vendido</th>
+            <th class="text-end">Taxas</th>
+            <th class="text-end">Custo prêmio</th>
+            <th class="text-end">Outras desp.</th>
+            <th class="text-end">Premiações</th>
+            <th class="text-end">Líquido</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rifas_rows %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ row.rifa.titulo }}</div>
+              <small class="text-secondary">#{{ row.rifa.id }}</small>
+            </td>
+            <td class="text-end">R$ {{ row.total_vendido }}</td>
+            <td class="text-end text-warning">R$ {{ row.taxas }}</td>
+            <td class="text-end text-secondary">R$ {{ row.custo_premio }}</td>
+            <td class="text-end text-secondary">R$ {{ row.outras_despesas }}</td>
+            <td class="text-end text-info">R$ {{ row.premiacoes }}</td>
+            <td class="text-end fw-semibold">R$ {{ row.liquido }}</td>
+            <td class="text-end">
+              <a href="{% url 'adminx_rifa_financeiro' row.rifa.id %}" class="btn btn-sm btn-outline-light">
+                <i class="fa-solid fa-gear"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-secondary">Nenhuma rifa encontrada.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="table-dark">
+            <th>Total</th>
+            <th class="text-end">R$ {{ total_bruto_geral }}</th>
+            <th class="text-end">R$ {{ total_taxas_geral }}</th>
+            <th class="text-end">R$ {{ total_custos_geral }}</th>
+            <th class="text-end">—</th>
+            <th class="text-end">R$ {{ total_premiacoes_geral }}</th>
+            <th class="text-end">R$ {{ total_liquido_geral }}</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ==== Bloco de afiliação ==== #}
+<div class="panel">
+  <div class="panel-h d-flex align-items-center gap-2">
+    <div class="title-sm"><i class="fa-solid fa-hand-holding-dollar me-2"></i>Afiliação</div>
+  </div>
+  <div class="panel-c">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="small text-secondary">Comissões geradas</div>
+        <div class="fs-5">R$ {{ total_comissoes_geradas }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="small text-secondary">Comissões aprovadas</div>
+        <div class="fs-5">R$ {{ total_comissoes_aprovadas }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="small text-secondary">Comissões pagas</div>
+        <div class="fs-5 text-success">R$ {{ total_comissoes_pagas }}</div>
+      </div>
+      <div class="col-md-3">
+        <div class="small text-secondary">Payouts pagos</div>
+        <div class="fs-5 text-info">R$ {{ total_payouts }}</div>
+      </div>
+    </div>
+    <hr class="text-secondary my-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <div class="small text-secondary">Saldo a pagar / a conferir</div>
+        <div class="fs-5 {% if saldo_afiliados > 0 %}text-warning{% else %}text-secondary{% endif %}">
+          R$ {{ saldo_afiliados }}
+        </div>
+      </div>
+      <div>
+        <a href="{% url 'adminx_commissions_list' %}" class="btn btn-sm btn-outline-light me-1">
+          <i class="fa-solid fa-sack-dollar me-1"></i>Comissões
+        </a>
+        <a href="{% url 'adminx_payouts_list' %}" class="btn btn-sm btn-outline-light">
+          <i class="fa-solid fa-money-bill-transfer me-1"></i>Payouts
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

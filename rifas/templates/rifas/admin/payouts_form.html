@@ -1,0 +1,53 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}{% if payout %}Editar pagamento afiliado{% else %}Novo pagamento afiliado{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">
+    <i class="fa-solid fa-money-bill-transfer me-2"></i>
+    {% if payout %}Editar pagamento afiliado{% else %}Novo pagamento afiliado{% endif %}
+  </h4>
+  <a href="{% url 'adminx_payouts_list' %}" class="btn btn-sm btn-outline-light">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-c">
+    <form method="post" class="row g-3">
+      {% csrf_token %}
+      <div class="col-md-6">
+        <label class="form-label">Afiliado *</label>
+        <select name="affiliate" class="form-select" required>
+          {% for a in affiliates %}
+            <option value="{{ a.id }}" {% if payout and payout.affiliate_id == a.id %}selected{% endif %}>{{ a.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Valor total (R$)</label>
+        <input type="number" step="0.01" name="valor_total" value="{{ payout.valor_total|default_if_none:'0' }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="em_proc" {% if payout.status == 'em_proc' or payout.status == 'em_processamento' %}selected{% endif %}>Em processamento</option>
+          <option value="pago" {% if payout.status == 'pago' %}selected{% endif %}>Pago</option>
+          <option value="cancelado" {% if payout.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+        </select>
+      </div>
+
+      <div class="col-md-12">
+        <label class="form-label">URL do comprovante (opcional)</label>
+        <input type="url" name="comprovante_url" value="{{ payout.comprovante_url|default_if_none:'' }}" class="form-control" placeholder="https://...">
+      </div>
+
+      <div class="col-12">
+        <button class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i>Salvar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

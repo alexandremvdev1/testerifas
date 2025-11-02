@@ -1,0 +1,65 @@
+﻿{% extends "rifas/admin/base_admin.html" %}
+{% block title %}Pagamentos a afiliados{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="fa-solid fa-money-bill-transfer me-2"></i>Pagamentos a afiliados</h4>
+  <a href="{% url 'adminx_payouts_new' %}" class="btn btn-sm btn-primary">
+    <i class="fa-solid fa-plus me-1"></i>Novo pagamento
+  </a>
+</div>
+
+<div class="panel">
+  <div class="panel-h">
+    <div class="title-sm">Payouts</div>
+  </div>
+  <div class="panel-c">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Afiliado</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Comprovante</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in payouts %}
+          <tr>
+            <td>{{ p.criado_em|date:"d/m/Y H:i" }}</td>
+            <td>{{ p.affiliate.nome }}</td>
+            <td>R$ {{ p.valor_total }}</td>
+            <td>
+              {% if p.status == "pago" %}
+                <span class="badge bg-success rounded-pill">pago</span>
+              {% elif p.status == "em_processamento" or p.status == "em_proc" %}
+                <span class="badge bg-warning text-dark rounded-pill">processando</span>
+              {% else %}
+                <span class="badge bg-secondary rounded-pill">{{ p.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.comprovante_url %}
+                <a href="{{ p.comprovante_url }}" class="link-light" target="_blank">ver</a>
+              {% else %}
+                <span class="text-secondary">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'adminx_payouts_edit' p.id %}" class="btn btn-sm btn-outline-light">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-secondary">Nenhum pagamento registrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

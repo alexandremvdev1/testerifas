@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
+import json
+import requests  # 👈 para chamar a API da Efí
 from decimal import Decimal
 from datetime import timedelta
 
+from django.conf import settings  # 👈 para pegar SITE_URL
 from django.db import models
 from django.db.models import Sum, Count
 from django.utils import timezone
@@ -32,6 +36,31 @@ class Empresa(models.Model):
         upload_to="empresas_logos/",
         blank=True,
         null=True,
+    )
+
+    # 👇 links padrão
+    whatsapp_suporte = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Link do WhatsApp para suporte geral da empresa",
+    )
+    whatsapp_grupo = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Link do grupo/comunidade da empresa",
+    )
+
+    # 👇 domínio para montar webhook / links públicos
+    dominio_publico = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Ex.: https://rifas.meucliente.com.br — usado para montar o webhook da Efí",
+    )
+    subdominio = models.CharField(
+        max_length=80,
+        blank=True,
+        null=True,
+        help_text="Opcional. Ex.: cliente01 (o sistema pode montar cliente01.seudominio.com)",
     )
 
     # quem cadastrou
@@ -73,21 +102,45 @@ class Empresa(models.Model):
 class EfiConfig(models.Model):
     """
     Credenciais da Efí para gerar cobrança Pix.
+
     Pode ser:
     - global (sem empresa e sem rifa)
     - por empresa
     - por rifa
+
+    SUPORTA:
+    - 1 arquivo só (certificate) com cert+key juntos
+    - OU 2 arquivos separados (certificate_cert + certificate_key)
+
+    Em DESENVOLVIMENTO (DEBUG=True) e sem nenhum cert enviado,
+    o método register_webhook() **SIMULA** o registro e já grava
+    a URL no banco, pra não travar o painel.
     """
     nome = models.CharField("nome interno", max_length=120)
 
     client_id = models.CharField(max_length=180)
     client_secret = models.CharField(max_length=180)
 
+    # 🔴 modo antigo: 1 arquivo só (mantido)
     certificate = models.FileField(
         upload_to="efi_certs/",
         blank=True,
         null=True,
-        help_text="Arquivo .pem/.p12 da Efí (se sua conta exigir)",
+        help_text="Arquivo ÚNICO .pem/.p12 da Efí (cert + key no mesmo arquivo).",
+    )
+
+    # 🆕 modo recomendado: 2 arquivos
+    certificate_cert = models.FileField(
+        upload_to="efi_certs/",
+        blank=True,
+        null=True,
+        help_text="CERT do cliente (.pem) — se usar arquivo separado.",
+    )
+    certificate_key = models.FileField(
+        upload_to="efi_certs/",
+        blank=True,
+        null=True,
+        help_text="KEY do cliente (.key/.pem) — se usar arquivo separado.",
     )
 
     chave_pix = models.CharField(
@@ -95,8 +148,9 @@ class EfiConfig(models.Model):
         help_text="Chave Pix cadastrada na Efí",
     )
 
+    # escopo
     empresa = models.ForeignKey(
-        Empresa,
+        "Empresa",
         on_delete=models.CASCADE,
         blank=True,
         null=True,
@@ -112,9 +166,17 @@ class EfiConfig(models.Model):
         help_text="Se preenchido, essa conta é só desta rifa.",
     )
 
+    # ambiente
     sandbox = models.BooleanField(default=True)
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    # guarda o último webhook registrado
+    webhook_url_registrado = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Última URL de webhook registrada na Efí para esta credencial.",
+    )
 
     class Meta:
         verbose_name = "Configuração Efí"
@@ -128,6 +190,167 @@ class EfiConfig(models.Model):
             scope = f"rifa: {self.rifa.slug}"
         return f"{self.nome} ({scope})"
 
+    # ======================================================
+    # helpers de URL / domínio
+    # ======================================================
+    def get_base_url(self) -> str:
+        """
+        Ordem:
+        1) domínio da empresa da rifa
+        2) domínio da empresa desta config
+        3) settings.SITE_URL
+        4) http://127.0.0.1:8000
+        """
+        if self.rifa_id and self.rifa.empresa and self.rifa.empresa.dominio_publico:
+            return self.rifa.empresa.dominio_publico.rstrip("/")
+
+        if self.empresa_id and self.empresa.dominio_publico:
+            return self.empresa.dominio_publico.rstrip("/")
+
+        site = getattr(settings, "SITE_URL", None) or os.getenv("SITE_URL")
+        if site:
+            return site.rstrip("/")
+
+        return "http://127.0.0.1:8000"
+
+    def build_webhook_url(self) -> str:
+        base = self.get_base_url()
+        return f"{base}/api/pagamentos/webhook/efi/"
+
+    # ======================================================
+    # helper de CERT
+    # ======================================================
+    def _get_requests_cert_param(self):
+        """
+        Monta o parâmetro `cert` do requests:
+        - se tiver cert E key separados → (cert, key)
+        - senão, se tiver 1 arquivo só → cert
+        - senão → None
+        """
+        # 2 arquivos separados
+        if self.certificate_cert and self.certificate_key:
+            return (self.certificate_cert.path, self.certificate_key.path)
+
+        # 1 arquivo só
+        if self.certificate:
+            return self.certificate.path
+
+        return None
+
+    def _has_any_cert(self) -> bool:
+        """
+        True se tem pelo menos um jeito de autenticar com cert.
+        """
+        if self.certificate and os.path.exists(self.certificate.path):
+            return True
+        if (
+            self.certificate_cert
+            and os.path.exists(self.certificate_cert.path)
+            and self.certificate_key
+            and os.path.exists(self.certificate_key.path)
+        ):
+            return True
+        return False
+
+    # ======================================================
+    # registro na Efí
+    # ======================================================
+    def get_token(self) -> str:
+        """
+        Pega o access_token na Efí.
+        Usa o certificado (1 ou 2 arquivos) se houver.
+        """
+        if self.sandbox:
+            auth_url = "https://pix-h.api.efipay.com.br/oauth/token"
+        else:
+            auth_url = "https://pix.api.efipay.com.br/oauth/token"
+
+        cert_param = self._get_requests_cert_param()
+
+        resp = requests.post(
+            auth_url,
+            auth=(self.client_id, self.client_secret),
+            json={"grant_type": "client_credentials"},
+            verify=True if cert_param else False,
+            cert=cert_param,
+            timeout=20,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["access_token"]
+
+    def register_webhook(self) -> dict:
+        """
+        Registra (ou sobrescreve) o webhook na Efí usando o domínio que está no modelo.
+
+        ⚠️ Em DEBUG=True e SEM certificado → simula o sucesso.
+        """
+        webhook_url = self.build_webhook_url()
+        is_debug = getattr(settings, "DEBUG", False)
+        has_cert = self._has_any_cert()
+
+        # =============== MODO DESENVOLVIMENTO ===============
+        if is_debug and not has_cert:
+            # não vamos nem bater na Efí, só salvar e retornar
+            self.webhook_url_registrado = webhook_url
+            self.save(update_fields=["webhook_url_registrado"])
+            return {
+                "ok": True,
+                "status_code": 200,
+                "text": "SIMULAÇÃO LOCAL: DEBUG=True e nenhum certificado enviado. "
+                        "Em produção a chamada real será feita.",
+                "webhook": webhook_url,
+                "endpoint": "simulado-local",
+            }
+        # =============== FIM MODO DESENVOLVIMENTO ===============
+
+        # fluxo REAL
+        access_token = self.get_token()
+
+        if self.sandbox:
+            url = f"https://pix-h.api.efipay.com.br/v2/webhook/{self.chave_pix}"
+        else:
+            url = f"https://pix.api.efipay.com.br/v2/webhook/{self.chave_pix}"
+
+        cert_param = self._get_requests_cert_param()
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        }
+        payload = {"webhookUrl": webhook_url}
+
+        try:
+            resp = requests.put(
+                url,
+                headers=headers,
+                data=json.dumps(payload),
+                verify=True if cert_param else False,
+                cert=cert_param,
+                timeout=20,
+            )
+        except requests.exceptions.RequestException as e:
+            # isso aqui vai cair exatamente no teu erro:
+            # ('Connection aborted.', RemoteDisconnected(...))
+            return {
+                "ok": False,
+                "status_code": None,
+                "text": f"Erro de rede/TLS ao falar com a Efí: {e}",
+                "webhook": webhook_url,
+                "endpoint": url,
+            }
+
+        if 200 <= resp.status_code < 300:
+            self.webhook_url_registrado = webhook_url
+            self.save(update_fields=["webhook_url_registrado"])
+
+        return {
+            "ok": 200 <= resp.status_code < 300,
+            "status_code": resp.status_code,
+            "text": resp.text,
+            "webhook": webhook_url,
+            "endpoint": url,
+        }
 
 # ============================================================
 # PESSOAS (quem compra)
@@ -197,8 +420,17 @@ class Rifa(models.Model):
 
     em_vendas = models.BooleanField(default=True)
 
-    link_whatsapp = models.URLField(blank=True, null=True)
-    link_grupo = models.URLField(blank=True, null=True)
+    # sobrescrevem o que vier da empresa
+    link_whatsapp = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Se preencher aqui, usa este link de suporte. Senão, usa o da empresa.",
+    )
+    link_grupo = models.URLField(
+        blank=True,
+        null=True,
+        help_text="Se preencher aqui, usa este link de grupo. Senão, usa o da empresa.",
+    )
 
     meio_pagamento = models.CharField(
         max_length=10,
@@ -237,6 +469,29 @@ class Rifa(models.Model):
     def em_vendas_agora(self) -> bool:
         now = timezone.now()
         return self.ativo and (self.inicio_vendas <= now <= self.fim_vendas)
+
+    # 👇👇👇 herança dos links da empresa
+    @property
+    def whatsapp_suporte(self):
+        """
+        Retorna o link de suporte da rifa, caindo para o da empresa se não tiver aqui.
+        """
+        if self.link_whatsapp:
+            return self.link_whatsapp
+        if self.empresa and self.empresa.whatsapp_suporte:
+            return self.empresa.whatsapp_suporte
+        return None
+
+    @property
+    def whatsapp_grupo(self):
+        """
+        Retorna o link de grupo/comunidade da rifa, caindo para o da empresa se não tiver aqui.
+        """
+        if self.link_grupo:
+            return self.link_grupo
+        if self.empresa and self.empresa.whatsapp_grupo:
+            return self.empresa.whatsapp_grupo
+        return None
 
 
 class Numero(models.Model):
