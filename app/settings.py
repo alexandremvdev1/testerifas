@@ -1,9 +1,7 @@
 import os
 from pathlib import Path
+import dj_database_url  # precisa estar no requirements.txt
 
-# ----------------------------------------
-# Paths
-# ----------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ----------------------------------------
@@ -14,11 +12,22 @@ SECRET_KEY = os.getenv(
     "django-insecure-d^@8398+$39b8o5k@&5mr0oh=(tlig3!pcwx*f3t_gdgqa$c#s",
 )
 
-# Em desenvolvimento: deixa ligado
-DEBUG = True
+# DEBUG: pego da env; se não tiver, fica False no servidor e True no local
+DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 
-# Só local mesmo
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+# Render manda o host dele, mas vamos montar assim:
+_default_hosts = ["127.0.0.1", "localhost"]
+env_hosts = os.getenv("ALLOWED_HOSTS")
+if env_hosts:
+    ALLOWED_HOSTS = _default_hosts + [h.strip() for h in env_hosts.split(",") if h.strip()]
+else:
+    ALLOWED_HOSTS = _default_hosts
+
+# CSRF (importante no Render)
+CSRF_TRUSTED_ORIGINS = []
+env_csrf = os.getenv("CSRF_TRUSTED_ORIGINS")
+if env_csrf:
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in env_csrf.split(",") if o.strip()]
 
 # ----------------------------------------
 # Apps
@@ -44,6 +53,8 @@ INSTALLED_APPS = [
 # ----------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # se usar whitenoise no Render, ativa aqui:
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -76,15 +87,24 @@ TEMPLATES = [
 WSGI_APPLICATION = "app.wsgi.application"
 
 # ----------------------------------------
-# Banco de dados (APENAS LOCAL)
+# Banco de dados
 # ----------------------------------------
-# Forçado para sqlite, não olha DATABASE_URL
+# 1) padrão: sqlite (dev/local)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# 2) se tiver DATABASE_URL (Render / Neon), sobrescreve
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASES["default"] = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,      # mantém conexões
+        ssl_require=True,      # Neon costuma precisar de SSL
+    )
 
 # ----------------------------------------
 # Auth / Login
@@ -118,10 +138,21 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# se quiser servir seus static do app rifas
 STATICFILES_DIRS = []
 rifas_static = BASE_DIR / "rifas" / "static"
 if rifas_static.exists():
     STATICFILES_DIRS.append(rifas_static)
+
+# whitenoise: servir estático no Render
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -135,19 +166,24 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Integrações / Config do projeto
 # ----------------------------------------
 MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "")
-SITE_URL = "http://127.0.0.1:8000"
 
-# Logs de SQL em dev (ajuda a ver erros de migrate)
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {"class": "logging.StreamHandler"},
-    },
-    "loggers": {
-        "django.db.backends": {
-            "handlers": ["console"],
-            "level": "INFO",
+# SITE_URL: pega do ambiente; se não tiver, usa o local
+SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
+
+# ----------------------------------------
+# Logs de SQL em dev
+# ----------------------------------------
+if DEBUG:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "console": {"class": "logging.StreamHandler"},
         },
-    },
-}
+        "loggers": {
+            "django.db.backends": {
+                "handlers": ["console"],
+                "level": "INFO",
+            },
+        },
+    }
