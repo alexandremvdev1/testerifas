@@ -115,68 +115,98 @@ def logout_view(request: HttpRequest):
 
 @login_required(login_url="adminx_login")
 def dashboard_view(request):
+    # só staff
     guard = _staff_or_403(request)
     if guard:
         return guard
 
-    # ---------- EMPRESA (seguro mesmo sem tabela) ----------
+    tables = connection.introspection.table_names()
+
     empresa = None
     efi = None
-    tables = connection.introspection.table_names()
-    if "rifas_empresa" in tables and request.user.is_authenticated:
+    if "rifas_empresa" in tables:
         empresa = Empresa.objects.filter(created_by=request.user).first()
-        # 👇 se tiver empresa, tenta pegar a conta EFI dela
         if empresa and "rifas_eficonfig" in tables:
             efi = EfiConfig.objects.filter(empresa=empresa).first()
-    # -------------------------------------------------------
 
-    hoje = timezone.localdate()
-    tz = timezone.get_current_timezone()
-    inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
-    fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
+    # valores padrão caso o banco esteja vazio
+    vendas_hoje = {"qtd": 0, "total": 0}
+    vendas_mes = {"qtd": 0, "total": 0}
+    numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+    rifas_ativas = 0
+    pendentes = 0
+    ultimos_pedidos = []
 
-    vendas_hoje = (
-        Pedido.objects
-        .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
-        .aggregate(qtd=Count("id"), total=Sum("total"))
-    )
-    vendas_mes = (
-        Pedido.objects
-        .filter(
-            status=Pedido.PAGO,
-            pago_em__year=hoje.year,
-            pago_em__month=hoje.month,
-        )
-        .aggregate(qtd=Count("id"), total=Sum("total"))
-    )
+    # só roda essas partes se as tabelas já existem
+    if "rifas_pedido" in tables and "rifas_rifa" in tables:
+        hoje = timezone.localdate()
+        tz = timezone.get_current_timezone()
+        inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
+        fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
 
-    # pode acontecer de você rodar o painel antes de migrar Numero
-    try:
-        numeros_status = {
-            r["status"]: r["qtd"]
-            for r in Numero.objects.values("status").annotate(qtd=Count("id"))
-        }
-    except Exception:
-        numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+        try:
+            vendas_hoje = (
+                Pedido.objects
+                .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
+                .aggregate(qtd=Count("id"), total=Sum("total"))
+            )
+        except Exception:
+            pass
 
-    rifas_ativas = Rifa.objects.filter(ativo=True).count()
-    pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
+        try:
+            vendas_mes = (
+                Pedido.objects
+                .filter(
+                    status=Pedido.PAGO,
+                    pago_em__year=hoje.year,
+                    pago_em__month=hoje.month,
+                )
+                .aggregate(qtd=Count("id"), total=Sum("total"))
+            )
+        except Exception:
+            pass
+
+        try:
+            rifas_ativas = Rifa.objects.filter(ativo=True).count()
+        except Exception:
+            rifas_ativas = 0
+
+        try:
+            pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
+        except Exception:
+            pendentes = 0
+
+        try:
+            ultimos_pedidos = (
+                Pedido.objects
+                .select_related("cliente", "rifa")
+                .order_by("-criado_em")[:10]
+            )
+        except Exception:
+            ultimos_pedidos = []
+
+    # tabela de números pode não existir ainda
+    if "rifas_numero" in tables:
+        try:
+            numeros_status = {
+                r["status"]: r["qtd"]
+                for r in Numero.objects.values("status").annotate(qtd=Count("id"))
+            }
+        except Exception:
+            pass
 
     ctx = {
         "empresa": empresa,
-        "efi": efi,  # 👈 AGORA o template enxerga
+        "efi": efi,
         "vendas_hoje": vendas_hoje,
         "vendas_mes": vendas_mes,
         "numeros_status": numeros_status,
         "rifas_ativas": rifas_ativas,
         "pendentes": pendentes,
-        "ultimos_pedidos": (
-            Pedido.objects
-            .select_related("cliente", "rifa")
-            .order_by("-criado_em")[:10]
-        ),
+        "ultimos_pedidos": ultimos_pedidos,
     }
     return render(request, "rifas/admin/dashboard.html", ctx)
+
 
 # ================================================================
 # RIFAS (listar / criar / editar)
