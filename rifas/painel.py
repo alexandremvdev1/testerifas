@@ -120,8 +120,12 @@ def dashboard_view(request):
     if guard:
         return guard
 
+    # quais tabelas existem nesse banco?
     tables = connection.introspection.table_names()
 
+    # ---------------------------
+    # EMPRESA / EFI (opcionais)
+    # ---------------------------
     empresa = None
     efi = None
     if "rifas_empresa" in tables:
@@ -129,7 +133,9 @@ def dashboard_view(request):
         if empresa and "rifas_eficonfig" in tables:
             efi = EfiConfig.objects.filter(empresa=empresa).first()
 
-    # valores padrão caso o banco esteja vazio
+    # ---------------------------
+    # VALORES DEFAULT (pra não quebrar o template)
+    # ---------------------------
     vendas_hoje = {"qtd": 0, "total": 0}
     vendas_mes = {"qtd": 0, "total": 0}
     numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
@@ -137,13 +143,20 @@ def dashboard_view(request):
     pendentes = 0
     ultimos_pedidos = []
 
-    # só roda essas partes se as tabelas já existem
-    if "rifas_pedido" in tables and "rifas_rifa" in tables:
+    # ===========================
+    # SOMENTE SE TIVER TABELAS
+    # ===========================
+    has_pedido = "rifas_pedido" in tables
+    has_rifa = "rifas_rifa" in tables
+    has_numero = "rifas_numero" in tables
+
+    if has_pedido and has_rifa:
         hoje = timezone.localdate()
         tz = timezone.get_current_timezone()
         inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
         fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
 
+        # vendas do dia
         try:
             vendas_hoje = (
                 Pedido.objects
@@ -151,8 +164,9 @@ def dashboard_view(request):
                 .aggregate(qtd=Count("id"), total=Sum("total"))
             )
         except Exception:
-            pass
+            vendas_hoje = {"qtd": 0, "total": 0}
 
+        # vendas do mês
         try:
             vendas_mes = (
                 Pedido.objects
@@ -164,18 +178,21 @@ def dashboard_view(request):
                 .aggregate(qtd=Count("id"), total=Sum("total"))
             )
         except Exception:
-            pass
+            vendas_mes = {"qtd": 0, "total": 0}
 
+        # rifas ativas
         try:
             rifas_ativas = Rifa.objects.filter(ativo=True).count()
         except Exception:
             rifas_ativas = 0
 
+        # pedidos pendentes
         try:
             pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
         except Exception:
             pendentes = 0
 
+        # últimos pedidos
         try:
             ultimos_pedidos = (
                 Pedido.objects
@@ -185,15 +202,15 @@ def dashboard_view(request):
         except Exception:
             ultimos_pedidos = []
 
-    # tabela de números pode não existir ainda
-    if "rifas_numero" in tables:
+    # números (pode não ter ainda)
+    if has_numero:
         try:
             numeros_status = {
                 r["status"]: r["qtd"]
                 for r in Numero.objects.values("status").annotate(qtd=Count("id"))
             }
         except Exception:
-            pass
+            numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
 
     ctx = {
         "empresa": empresa,
@@ -206,7 +223,6 @@ def dashboard_view(request):
         "ultimos_pedidos": ultimos_pedidos,
     }
     return render(request, "rifas/admin/dashboard.html", ctx)
-
 
 # ================================================================
 # RIFAS (listar / criar / editar)
