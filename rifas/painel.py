@@ -88,8 +88,13 @@ def _staff_or_403(request: HttpRequest):
 # ================================================================
 # AUTENTICAÇÃO
 # ================================================================
+from django.template import TemplateDoesNotExist
+
 def login_view(request: HttpRequest):
-    """Tela de login do painel adminx."""
+    """
+    Tela de login do painel adminx.
+    Se o template personalizado não existir, mostra uma tela simples.
+    """
     if request.user.is_authenticated and request.user.is_staff:
         return redirect("adminx_dashboard")
 
@@ -105,7 +110,37 @@ def login_view(request: HttpRequest):
             return redirect("adminx_dashboard")
         messages.error(request, "Credenciais inválidas ou sem permissão.")
 
-    return render(request, "rifas/admin/login.html", {"form": form})
+    # tenta renderizar o template bonito
+    try:
+        return render(request, "rifas/admin/login.html", {"form": form})
+    except TemplateDoesNotExist:
+        # fallback: HTML simples (não dá 500 nunca)
+        return HttpResponse(
+            f"""
+            <html>
+              <head><title>Login painel</title></head>
+              <body style="font-family:Arial;padding:20px;">
+                <h2>Login do painel (fallback)</h2>
+                <p>O template <code>rifas/admin/login.html</code> não foi encontrado.</p>
+                <form method="post">
+                  {request.csrf_processing_done and "" or ""}
+                  <input type="hidden" name="csrfmiddlewaretoken" value="{getattr(request, 'csrf_token', '')}">
+                  <div>
+                    <label>Usuário:</label><br>
+                    <input type="text" name="username">
+                  </div>
+                  <div>
+                    <label>Senha:</label><br>
+                    <input type="password" name="password">
+                  </div>
+                  <button type="submit">Entrar</button>
+                </form>
+              </body>
+            </html>
+            """,
+            content_type="text/html",
+        )
+
 
 
 def logout_view(request: HttpRequest):
