@@ -113,61 +113,45 @@ def logout_view(request: HttpRequest):
     return redirect("adminx_login")
 
 
+from django.views.decorators.cache import never_cache
+
+@never_cache
 @login_required(login_url="adminx_login")
 def dashboard_view(request):
-    # só staff
-    guard = _staff_or_403(request)
-    if guard:
-        return guard
+    # precisa ser staff
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Você não tem permissão para acessar este painel.")
 
-    # quais tabelas existem nesse banco?
-    tables = connection.introspection.table_names()
+    try:
+        # ---------- EMPRESA (seguro mesmo sem tabela) ----------
+        empresa = None
+        efi = None
+        tables = connection.introspection.table_names()
 
-    # ---------------------------
-    # EMPRESA / EFI (opcionais)
-    # ---------------------------
-    empresa = None
-    efi = None
-    if "rifas_empresa" in tables:
-        empresa = Empresa.objects.filter(created_by=request.user).first()
+        if "rifas_empresa" in tables:
+            empresa = (
+                Empresa.objects
+                .filter(created_by=request.user)
+                .first()
+            )
+
         if empresa and "rifas_eficonfig" in tables:
             efi = EfiConfig.objects.filter(empresa=empresa).first()
 
-    # ---------------------------
-    # VALORES DEFAULT (pra não quebrar o template)
-    # ---------------------------
-    vendas_hoje = {"qtd": 0, "total": 0}
-    vendas_mes = {"qtd": 0, "total": 0}
-    numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
-    rifas_ativas = 0
-    pendentes = 0
-    ultimos_pedidos = []
-
-    # ===========================
-    # SOMENTE SE TIVER TABELAS
-    # ===========================
-    has_pedido = "rifas_pedido" in tables
-    has_rifa = "rifas_rifa" in tables
-    has_numero = "rifas_numero" in tables
-
-    if has_pedido and has_rifa:
         hoje = timezone.localdate()
         tz = timezone.get_current_timezone()
         inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
         fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
 
-        # vendas do dia
-        try:
+        vendas_hoje = {"qtd": 0, "total": 0}
+        vendas_mes = {"qtd": 0, "total": 0}
+
+        if "rifas_pedido" in tables:
             vendas_hoje = (
                 Pedido.objects
                 .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
                 .aggregate(qtd=Count("id"), total=Sum("total"))
             )
-        except Exception:
-            vendas_hoje = {"qtd": 0, "total": 0}
-
-        # vendas do mês
-        try:
             vendas_mes = (
                 Pedido.objects
                 .filter(
@@ -177,52 +161,56 @@ def dashboard_view(request):
                 )
                 .aggregate(qtd=Count("id"), total=Sum("total"))
             )
-        except Exception:
-            vendas_mes = {"qtd": 0, "total": 0}
 
-        # rifas ativas
-        try:
+        # números
+        numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+        if "rifas_numero" in tables:
+            try:
+                numeros_status = {
+                    r["status"]: r["qtd"]
+                    for r in Numero.objects.values("status").annotate(qtd=Count("id"))
+                }
+            except Exception:
+                pass
+
+        rifas_ativas = 0
+        if "rifas_rifa" in tables:
             rifas_ativas = Rifa.objects.filter(ativo=True).count()
-        except Exception:
-            rifas_ativas = 0
 
-        # pedidos pendentes
-        try:
+        pendentes = 0
+        ultimos_pedidos = []
+        if "rifas_pedido" in tables:
             pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
-        except Exception:
-            pendentes = 0
-
-        # últimos pedidos
-        try:
             ultimos_pedidos = (
                 Pedido.objects
                 .select_related("cliente", "rifa")
                 .order_by("-criado_em")[:10]
             )
-        except Exception:
-            ultimos_pedidos = []
 
-    # números (pode não ter ainda)
-    if has_numero:
-        try:
-            numeros_status = {
-                r["status"]: r["qtd"]
-                for r in Numero.objects.values("status").annotate(qtd=Count("id"))
-            }
-        except Exception:
-            numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+        ctx = {
+            "empresa": empresa,
+            "efi": efi,
+            "vendas_hoje": vendas_hoje,
+            "vendas_mes": vendas_mes,
+            "numeros_status": numeros_status,
+            "rifas_ativas": rifas_ativas,
+            "pendentes": pendentes,
+            "ultimos_pedidos": ultimos_pedidos,
+        }
 
-    ctx = {
-        "empresa": empresa,
-        "efi": efi,
-        "vendas_hoje": vendas_hoje,
-        "vendas_mes": vendas_mes,
-        "numeros_status": numeros_status,
-        "rifas_ativas": rifas_ativas,
-        "pendentes": pendentes,
-        "ultimos_pedidos": ultimos_pedidos,
-    }
-    return render(request, "rifas/admin/dashboard.html", ctx)
+        # tenta renderizar o template normal
+        return render(request, "rifas/admin/dashboard.html", ctx)
+
+    except Exception as e:
+        # fallback: não quebra mais o painel
+        return HttpResponse(
+            f"<h1>Painel adminx</h1>"
+            f"<p>O painel carregou, mas o template ou uma query deu erro.</p>"
+            f"<pre>{e}</pre>",
+            content_type="text/html",
+            status=200,
+        )
+
 
 # ================================================================
 # RIFAS (listar / criar / editar)
