@@ -88,13 +88,8 @@ def _staff_or_403(request: HttpRequest):
 # ================================================================
 # AUTENTICAÇÃO
 # ================================================================
-from django.template import TemplateDoesNotExist
-
 def login_view(request: HttpRequest):
-    """
-    Tela de login do painel adminx.
-    Se o template personalizado não existir, mostra uma tela simples.
-    """
+    """Tela de login do painel adminx."""
     if request.user.is_authenticated and request.user.is_staff:
         return redirect("adminx_dashboard")
 
@@ -110,37 +105,7 @@ def login_view(request: HttpRequest):
             return redirect("adminx_dashboard")
         messages.error(request, "Credenciais inválidas ou sem permissão.")
 
-    # tenta renderizar o template bonito
-    try:
-        return render(request, "rifas/admin/login.html", {"form": form})
-    except TemplateDoesNotExist:
-        # fallback: HTML simples (não dá 500 nunca)
-        return HttpResponse(
-            f"""
-            <html>
-              <head><title>Login painel</title></head>
-              <body style="font-family:Arial;padding:20px;">
-                <h2>Login do painel (fallback)</h2>
-                <p>O template <code>rifas/admin/login.html</code> não foi encontrado.</p>
-                <form method="post">
-                  {request.csrf_processing_done and "" or ""}
-                  <input type="hidden" name="csrfmiddlewaretoken" value="{getattr(request, 'csrf_token', '')}">
-                  <div>
-                    <label>Usuário:</label><br>
-                    <input type="text" name="username">
-                  </div>
-                  <div>
-                    <label>Senha:</label><br>
-                    <input type="password" name="password">
-                  </div>
-                  <button type="submit">Entrar</button>
-                </form>
-              </body>
-            </html>
-            """,
-            content_type="text/html",
-        )
-
+    return render(request, "rifas/admin/login.html", {"form": form})
 
 
 def logout_view(request: HttpRequest):
@@ -148,104 +113,70 @@ def logout_view(request: HttpRequest):
     return redirect("adminx_login")
 
 
-from django.views.decorators.cache import never_cache
-
-@never_cache
 @login_required(login_url="adminx_login")
 def dashboard_view(request):
-    # precisa ser staff
-    if not request.user.is_staff:
-        return HttpResponseForbidden("Você não tem permissão para acessar este painel.")
+    guard = _staff_or_403(request)
+    if guard:
+        return guard
 
-    try:
-        # ---------- EMPRESA (seguro mesmo sem tabela) ----------
-        empresa = None
-        efi = None
-        tables = connection.introspection.table_names()
-
-        if "rifas_empresa" in tables:
-            empresa = (
-                Empresa.objects
-                .filter(created_by=request.user)
-                .first()
-            )
-
+    # ---------- EMPRESA (seguro mesmo sem tabela) ----------
+    empresa = None
+    efi = None
+    tables = connection.introspection.table_names()
+    if "rifas_empresa" in tables and request.user.is_authenticated:
+        empresa = Empresa.objects.filter(created_by=request.user).first()
+        # 👇 se tiver empresa, tenta pegar a conta EFI dela
         if empresa and "rifas_eficonfig" in tables:
             efi = EfiConfig.objects.filter(empresa=empresa).first()
+    # -------------------------------------------------------
 
-        hoje = timezone.localdate()
-        tz = timezone.get_current_timezone()
-        inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
-        fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
+    hoje = timezone.localdate()
+    tz = timezone.get_current_timezone()
+    inicio_dia = datetime.combine(hoje, datetime.min.time(), tzinfo=tz)
+    fim_dia = datetime.combine(hoje, datetime.max.time(), tzinfo=tz)
 
-        vendas_hoje = {"qtd": 0, "total": 0}
-        vendas_mes = {"qtd": 0, "total": 0}
-
-        if "rifas_pedido" in tables:
-            vendas_hoje = (
-                Pedido.objects
-                .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
-                .aggregate(qtd=Count("id"), total=Sum("total"))
-            )
-            vendas_mes = (
-                Pedido.objects
-                .filter(
-                    status=Pedido.PAGO,
-                    pago_em__year=hoje.year,
-                    pago_em__month=hoje.month,
-                )
-                .aggregate(qtd=Count("id"), total=Sum("total"))
-            )
-
-        # números
-        numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
-        if "rifas_numero" in tables:
-            try:
-                numeros_status = {
-                    r["status"]: r["qtd"]
-                    for r in Numero.objects.values("status").annotate(qtd=Count("id"))
-                }
-            except Exception:
-                pass
-
-        rifas_ativas = 0
-        if "rifas_rifa" in tables:
-            rifas_ativas = Rifa.objects.filter(ativo=True).count()
-
-        pendentes = 0
-        ultimos_pedidos = []
-        if "rifas_pedido" in tables:
-            pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
-            ultimos_pedidos = (
-                Pedido.objects
-                .select_related("cliente", "rifa")
-                .order_by("-criado_em")[:10]
-            )
-
-        ctx = {
-            "empresa": empresa,
-            "efi": efi,
-            "vendas_hoje": vendas_hoje,
-            "vendas_mes": vendas_mes,
-            "numeros_status": numeros_status,
-            "rifas_ativas": rifas_ativas,
-            "pendentes": pendentes,
-            "ultimos_pedidos": ultimos_pedidos,
-        }
-
-        # tenta renderizar o template normal
-        return render(request, "rifas/admin/dashboard.html", ctx)
-
-    except Exception as e:
-        # fallback: não quebra mais o painel
-        return HttpResponse(
-            f"<h1>Painel adminx</h1>"
-            f"<p>O painel carregou, mas o template ou uma query deu erro.</p>"
-            f"<pre>{e}</pre>",
-            content_type="text/html",
-            status=200,
+    vendas_hoje = (
+        Pedido.objects
+        .filter(status=Pedido.PAGO, pago_em__range=(inicio_dia, fim_dia))
+        .aggregate(qtd=Count("id"), total=Sum("total"))
+    )
+    vendas_mes = (
+        Pedido.objects
+        .filter(
+            status=Pedido.PAGO,
+            pago_em__year=hoje.year,
+            pago_em__month=hoje.month,
         )
+        .aggregate(qtd=Count("id"), total=Sum("total"))
+    )
 
+    # pode acontecer de você rodar o painel antes de migrar Numero
+    try:
+        numeros_status = {
+            r["status"]: r["qtd"]
+            for r in Numero.objects.values("status").annotate(qtd=Count("id"))
+        }
+    except Exception:
+        numeros_status = {"livre": 0, "reservado": 0, "pago": 0}
+
+    rifas_ativas = Rifa.objects.filter(ativo=True).count()
+    pendentes = Pedido.objects.filter(status=Pedido.PENDENTE).count()
+
+    ctx = {
+        "empresa": empresa,
+        "efi": efi,  # 👈 AGORA o template enxerga
+        "vendas_hoje": vendas_hoje,
+        "vendas_mes": vendas_mes,
+        "numeros_status": numeros_status,
+        "rifas_ativas": rifas_ativas,
+        "pendentes": pendentes,
+        "ultimos_pedidos": (
+            Pedido.objects
+            .select_related("cliente", "rifa")
+            .order_by("-criado_em")[:10]
+        ),
+    }
+    return render(request, "rifas/admin/dashboard.html", ctx)
 
 # ================================================================
 # RIFAS (listar / criar / editar)
