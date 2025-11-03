@@ -1,7 +1,6 @@
 # app/settings.py
 import os
 from pathlib import Path
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,11 +19,16 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 # Hosts / CSRF
 # ----------------------------------------
 # deixa aberto pra todos (deploy rápido / testes)
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "*").split(",") if h.strip()]
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.getenv("ALLOWED_HOSTS", "*").split(",")
+    if h.strip()
+]
 
-# pode deixar vazio enquanto testa
 CSRF_TRUSTED_ORIGINS = [
-    o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+    o.strip()
+    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
 ]
 
 # ----------------------------------------
@@ -82,7 +86,7 @@ WSGI_APPLICATION = "app.wsgi.application"
 # ----------------------------------------
 # Banco de dados
 # ----------------------------------------
-# padrão: sqlite
+# padrão: sqlite (sem dj_database_url)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -93,6 +97,7 @@ DATABASES = {
 # ----------------------------------------
 # Auth
 # ----------------------------------------
+# se o painel customizado estiver nas urls
 LOGIN_URL = "adminx_login"
 LOGIN_REDIRECT_URL = "adminx_dashboard"
 
@@ -127,13 +132,13 @@ rifas_static = BASE_DIR / "rifas" / "static"
 if rifas_static.exists():
     STATICFILES_DIRS.append(rifas_static)
 
-# ⚠️ aqui é o pulo do gato: sem manifest
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        # não usa Manifest enquanto não tiver collectstatic no Render
+        # Manifest costuma dar erro se não rodar collectstatic no servidor,
+        # então vamos de CompressedStaticFilesStorage
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
